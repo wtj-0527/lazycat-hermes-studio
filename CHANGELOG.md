@@ -1,3 +1,29 @@
+## v2026.08.04.0701
+
+### 版本信息
+- **Hermes Studio Source**: `4e3442008492809ea17dad8df7e0c2a668cbf3d9`
+- **Studio tree**: `2bb6d0ff0e6ceb84cfaf68934d0a2901bcbe0784`
+- **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608040701-4e344200`
+- **Browser Runtime API**: `ghcr.io/steel-dev/steel-browser-api:latest`
+- **Browser Runtime UI**: `ghcr.io/steel-dev/steel-browser-ui:latest`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.0701.lpk`
+
+### 版本说明
+- 修复 Browser Runtime 页面状态读取永久挂起时 `tabs.list` 无法收敛的问题；超时后释放 single-flight，并使用 owner-scoped 最近验证状态继续响应。
+- 修复 Agent 控制、用户接管、页面消失与 deactivation 的生命周期竞态；先撤销 view/control generation，再取消 Runtime 操作、排空 page queue，最后执行 exact Runtime release。
+- Runtime 返回页面消失时支持窄范围幂等收敛；其他取消或 release 错误继续 fail-closed，不重新开放 viewer input 或 Agent 控制。
+- 增加 `steel-hermesstudio.*` 诊断域名分流，并将诊断响应中的 Runtime HTTP/CDP 地址改写为同源 HTTPS/WSS；诊断 UI 不参与 Studio 健康依赖。
+- 保持原数字端口域名规则不变：`<数字>-hermesstudio.*` 继续转发至 `hermes-webui:<数字端口>`。
+- exact baseline 全量 Vitest 对账无 candidate-only failure；Browser 聚焦测试 177/177、生命周期测试 43/43、生产构建、Client/Server typecheck 和 Harness 均通过。
+
+### 变更文件
+- `CHANGELOG.md`
+- `content/nginx.conf`
+- `lzc-manifest.yml`
+- `package.yml`
+
+---
+
 ## v2026.08.04.0055
 
 ### 版本信息
