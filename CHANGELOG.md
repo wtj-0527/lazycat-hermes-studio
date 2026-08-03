@@ -1,17 +1,18 @@
-## v2026.08.03.2349
+## v2026.08.04.0008
 
 ### 版本信息
 - **Hermes Studio Source**: `4dd54e3b1b1ef9c9ca7576b1e5eb4125c7c9e16d`
-- **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608032349-4dd54e3b`
+- **Studio tree**: `ca6db4256f6086f01eaa042db520b0a110238ec3`
+- **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608040008-4dd54e3b`
 - **Browser Runtime API**: `ghcr.io/steel-dev/steel-browser-api:latest`
 - **Browser Runtime UI**: `ghcr.io/steel-dev/steel-browser-ui:latest`
-- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.03.2349.lpk`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.0008.lpk`
 
 ### 版本说明
 - 增加 Hermes Studio 内置统一 Browser 工作区；BrowserPanel、Agent 控制、用户接管和 live view 均由 Studio 提供。
 - 部署私网 Browser Runtime API；Studio 通过通用 Session API/CDP 接入，API 不配置外部 route。
 - 保留私网 Runtime UI 作为诊断控制台；它不是 BrowserPanel、不参与产品链路，也不作为 Studio 健康依赖。
-- Studio 镜像已通过 production-pruned 依赖、Server bundle、BrowserPanel 产物和 HTTP 200 启动验证；镜像引用使用唯一 tag，digest 仅作旁路审计。
+- Studio 镜像已通过 production-pruned 依赖、Server bundle、BrowserPanel 产物和 HTTP 200 启动验证，并携带 exact revision/tree OCI provenance；镜像引用使用唯一 tag，digest 仅作旁路审计。
 - 许可证元数据按当前上游纠正为 BSL-1.1；Browser Runtime 为 Apache-2.0。Hermes Studio 在 2029-05-10 Change Date 前的商业使用需按 EKKOLearnAI 的 BSL 条款另行确认，之后 Change License 为 Apache-2.0。
 
 ### 变更文件
