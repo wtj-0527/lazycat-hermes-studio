@@ -1,0 +1,28 @@
+{
+  "artifact": "Hermes Studio LazyCat Browser Runtime test package",
+  "version": "2026.08.03.1654",
+  "source": {
+    "repository": "https://github.com/wtj-0527/hermes-studio",
+    "commit": "b55997b3f867927ad71c95f08f3c0593ddf39570",
+    "tree": "12d4cef4b44ffbecf1ceb44bb515f7bda9c1becc",
+    "upstreamRepository": "https://github.com/EKKOLearnAI/hermes-studio",
+    "upstreamMain": "99c741e14fcbcd1c76e30dc41d92ea9f9adacaa1"
+  },
+  "images": {
+    "studioTag": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608031654-b55997b3",
+    "studio": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:ccdae90b691a5c040cb33e4c54f6802384822979cbd952ee88fd53c24cbae3ef",
+    "studioConfigDigest": "sha256:1fccd99b1be7f6cf20e47546d787a44a80200059e34a7ff292e3b9082d7d6e38",
+    "gateway": "node@sha256:87608ec5109795be954baa2f5b0b6da1911423d8b44b58fecda31f81d28bfc0f",
+    "engine": "ghcr.io/steel-dev/steel-browser-api@sha256:a58dd308875116fd5828c148d02c887075a2fd9dc3216eeeede64dce1277b23b",
+    "nginx": "registry.cn-shanghai.aliyuncs.com/wtjking/nginx@sha256:3c8a9723f8479ca59eed570c019f5264c834d3298312cea68e51a6d88469de62"
+  },
+  "licenses": {
+    "studio": "Business Source License 1.1; Change Date 2029-05-10; Change License Apache-2.0",
+    "engine": "Apache-2.0"
+  },
+  "notes": [
+    "The Hermes Studio source contract is provider-neutral.",
+    "The concrete third-party runtime is disclosed only in this downstream packaging provenance.",
+    "This is an unpublished test package for installation acceptance."
+  ]
+}

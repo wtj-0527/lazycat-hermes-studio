@@ -1,3 +1,20 @@
+## v2026.08.03.1654
+
+### 版本信息
+- **Hermes Studio source**: `b55997b3f867927ad71c95f08f3c0593ddf39570`
+- **Upstream main base**: `99c741e14fcbcd1c76e30dc41d92ea9f9adacaa1`
+- **镜像 tag**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608031654-b55997b3`
+- **镜像 digest**: `sha256:ccdae90b691a5c040cb33e4c54f6802384822979cbd952ee88fd53c24cbae3ef`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.03.1654.lpk`
+
+### 版本说明
+- 增加供应商无关的 Browser Runtime/Gateway 契约与统一 Browser 面板。
+- Runtime Gateway 与 engine 仅在应用私网中提供服务；只有 nginx 暴露公开路由。
+- Gateway 使用私有 token 文件、精确 session fence、page-scoped live view 和强制认证 Egress proxy。
+- 具体第三方 Runtime 镜像及 Apache-2.0 许可证仅保留在 LazyCat 包装层。
+
+---
+
 ## v2026.07.20.0050
 
 ### 版本信息

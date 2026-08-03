@@ -13,12 +13,12 @@ application:
 
 services:
   nginx:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/nginx@sha256:3c8a9723f8479ca59eed570c019f5264c834d3298312cea68e51a6d88469de62
     setup_script: |
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.31-carry1-202607191930
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:ccdae90b691a5c040cb33e4c54f6802384822979cbd952ee88fd53c24cbae3ef
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8648"]
       interval: 5s
@@ -32,6 +32,10 @@ services:
       - HERMES_BIN=/opt/hermes/.venv/bin/hermes
       - HERMES_WEB_UI_MANAGED_GATEWAY=1
       - HERMES_WEB_UI_XAI_CALLBACK_BIND_HOST=0.0.0.0
+      - HERMES_BROWSER_RUNTIME_URL=http://browser-runtime-gateway:3000
+      - HERMES_BROWSER_RUNTIME_TOKEN_FILE=/run/browser-runtime/token
+      - HERMES_BROWSER_EGRESS_PROXY_BIND_HOST=0.0.0.0
+      - HERMES_BROWSER_EGRESS_PROXY_HOST=hermes-webui
       - PATH=/home/agent/.local/bin:/opt/hermes/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       - HERMES_ALLOW_ROOT_GATEWAY=1
       - LANG=C.UTF-8
@@ -39,6 +43,7 @@ services:
     binds:
       - /lzcapp/var/cache:/lzcapp/cache
       - /lzcapp/documents/{{ .S.DeployUID }}:/home/agent
+      - /lzcapp/var/browser-runtime:/run/browser-runtime
 
     setup_script: |
       #!/bin/sh
@@ -147,5 +152,23 @@ services:
         echo '[setup] SSH config linked to /home/agent'
       fi
 
+  browser-runtime-gateway:
+    image: node@sha256:87608ec5109795be954baa2f5b0b6da1911423d8b44b58fecda31f81d28bfc0f
+    entrypoint: /bin/sh
+    command: /lzcapp/pkg/content/browser-runtime-gateway/entrypoint.sh
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3000
+      - BROWSER_RUNTIME_TOKEN_FILE=/run/browser-runtime/token
+      - BROWSER_RUNTIME_ENGINE_URL=http://browser-runtime-engine:3000
+      - BROWSER_RUNTIME_EGRESS_PROXY_HOST=hermes-webui
+    binds:
+      - /lzcapp/var/browser-runtime:/run/browser-runtime
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      start_period: 30s
 
-
+  browser-runtime-engine:
+    image: ghcr.io/steel-dev/steel-browser-api@sha256:a58dd308875116fd5828c148d02c887075a2fd9dc3216eeeede64dce1277b23b
