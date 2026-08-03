@@ -18,7 +18,9 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.31-carry1-202607191930
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608032349-4dd54e3b
+    depends_on:
+      - api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8648"]
       interval: 5s
@@ -32,6 +34,9 @@ services:
       - HERMES_BIN=/opt/hermes/.venv/bin/hermes
       - HERMES_WEB_UI_MANAGED_GATEWAY=1
       - HERMES_WEB_UI_XAI_CALLBACK_BIND_HOST=0.0.0.0
+      - HERMES_BROWSER_RUNTIME_URL=http://api:3000
+      - HERMES_BROWSER_EGRESS_PROXY_BIND_HOST=0.0.0.0
+      - HERMES_BROWSER_EGRESS_PROXY_HOST=hermes-webui
       - PATH=/home/agent/.local/bin:/opt/hermes/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       - HERMES_ALLOW_ROOT_GATEWAY=1
       - LANG=C.UTF-8
@@ -146,6 +151,31 @@ services:
         ln -sf /home/agent/.ssh/config /root/.ssh/config
         echo '[setup] SSH config linked to /home/agent'
       fi
+
+  api:
+    image: ghcr.io/steel-dev/steel-browser-api:latest
+    shm_size: 2gb
+    environment:
+      - DOMAIN=api:3000
+      - CDP_DOMAIN=api:9223
+      - LOG_STORAGE_ENABLED=true
+      - LOG_STORAGE_PATH=/data/logs/browser-logs.duckdb
+    binds:
+      - /lzcapp/var/browser-runtime/logs:/data/logs
+      - /lzcapp/var/browser-runtime/exports:/tmp/steel-browser-exports
+      - /lzcapp/var/browser-runtime/cache:/app/.cache
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/v1/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 120s
+
+  ui:
+    image: ghcr.io/steel-dev/steel-browser-ui:latest
+    depends_on:
+      - api
+    environment:
+      - API_URL=http://api:3000
 
 
 
