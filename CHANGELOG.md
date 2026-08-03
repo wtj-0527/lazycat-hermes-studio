@@ -1,4 +1,4 @@
-## v2026.08.04.0008
+## v2026.08.04.0055
 
 ### 版本信息
 - **Hermes Studio Source**: `4dd54e3b1b1ef9c9ca7576b1e5eb4125c7c9e16d`
@@ -6,12 +6,13 @@
 - **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608040008-4dd54e3b`
 - **Browser Runtime API**: `ghcr.io/steel-dev/steel-browser-api:latest`
 - **Browser Runtime UI**: `ghcr.io/steel-dev/steel-browser-ui:latest`
-- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.0008.lpk`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.0055.lpk`
 
 ### 版本说明
 - 增加 Hermes Studio 内置统一 Browser 工作区；BrowserPanel、Agent 控制、用户接管和 live view 均由 Studio 提供。
 - 部署私网 Browser Runtime API；Studio 通过通用 Session API/CDP 接入，API 不配置外部 route。
 - 保留私网 Runtime UI 作为诊断控制台；它不是 BrowserPanel、不参与产品链路，也不作为 Studio 健康依赖。
+- 修复首次安装时 nginx 与 `hermes-webui` 并发启动导致上游服务名尚未注册、nginx 以 `host not found in upstream` 退出的问题；nginx 现在显式等待 `hermes-webui` 启动。
 - Studio 镜像已通过 production-pruned 依赖、Server bundle、BrowserPanel 产物和 HTTP 200 启动验证，并携带 exact revision/tree OCI provenance；镜像引用使用唯一 tag，digest 仅作旁路审计。
 - 许可证元数据按当前上游纠正为 BSL-1.1；Browser Runtime 为 Apache-2.0。Hermes Studio 在 2029-05-10 Change Date 前的商业使用需按 EKKOLearnAI 的 BSL 条款另行确认，之后 Change License 为 Apache-2.0。
 

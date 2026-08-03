@@ -14,6 +14,8 @@ application:
 services:
   nginx:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine
+    depends_on:
+      - hermes-webui
     setup_script: |
       sh /lzcapp/pkg/content/setup-nginx.sh
 
