@@ -20,7 +20,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608040959-8e9dd75b
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608041511-04623c86
     depends_on:
       - api
     healthcheck:
@@ -37,6 +37,8 @@ services:
       - HERMES_WEB_UI_MANAGED_GATEWAY=1
       - HERMES_WEB_UI_XAI_CALLBACK_BIND_HOST=0.0.0.0
       - HERMES_BROWSER_RUNTIME_URL=http://api:3000
+      - HERMES_BROWSER_EGRESS_DOH_URL=https://cloudflare-dns.com/dns-query
+      - HERMES_BROWSER_EGRESS_DOH_BOOTSTRAP_IPS=1.1.1.1,1.0.0.1
       - HERMES_BROWSER_EGRESS_PROXY_BIND_HOST=0.0.0.0
       - HERMES_BROWSER_EGRESS_PROXY_HOST=hermes-webui
       - PATH=/home/agent/.local/bin:/opt/hermes/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -155,7 +157,7 @@ services:
       fi
 
   api:
-    image: ghcr.io/steel-dev/steel-browser-api:latest
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-api:202608041511-e5eaefd6
     shm_size: 2gb
     environment:
       - DOMAIN=api:3000
@@ -173,7 +175,7 @@ services:
       start_period: 120s
 
   ui:
-    image: ghcr.io/steel-dev/steel-browser-ui:latest
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-ui:202608041511
     depends_on:
       - api
     environment:

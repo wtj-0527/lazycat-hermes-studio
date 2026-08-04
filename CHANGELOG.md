@@ -1,3 +1,35 @@
+## v2026.08.04.1511
+
+### 版本信息
+- **Hermes Studio Source**: `04623c86670f90013b89305d8fee1a6f2a7f7960`
+- **Studio tree**: `8a4ef8fb9ef73cad23612c11cf5d4b57faaf39b0`
+- **Studio candidate diff**: `acafbfb8330d572accb62d658fe7b7529595a5290af13897ba797784ed25ca59`
+- **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608041511-04623c86`
+- **Browser Runtime upstream base**: `5880b48c1af107219ff3d904edbb8f6b76bea9b6`
+- **Browser Runtime carry**: `e5eaefd6437dcef0b049e44992f811eb0f4e380a`
+- **Runtime tree**: `fe3df8b47ebd31568ad9c1f2cc81c88298db06c9`
+- **Runtime candidate diff**: `cb1fb5c4fe73f7e13c6071e80f6e69ff2b0de8b423bb8313648a43a69c265276`
+- **Browser Runtime API**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-api:202608041511-e5eaefd6`
+- **Browser Runtime UI**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-ui:202608041511`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.1511.lpk`
+
+### 版本说明
+- 修复 LazyCat Fake-IP DNS 环境下 Browser egress 无法访问公网的问题：仅在系统 DNS 返回明确 benchmark Fake-IP 且没有其他禁止地址时，使用默认关闭、显式配置的 RFC 8484 DoH fallback；解析器固定连接已验证公网 bootstrap IP，同时保留 resolver Host/SNI/CA 校验，并对全部返回地址重新执行 SSRF policy。
+- Fake-IP、loopback、RFC1918、link-local、metadata、reserved、transition、rebinding 和 mixed-private 答案仍 fail closed；socket 只连接经过批准的确切公网 IP，不直接放行 `198.18.0.0/15`。
+- 修复 Browser Runtime exact release 与异步 target setup 的竞态：停止接收新任务、推进 generation、有限排空 target setup 后再关闭 Browser；仅抑制 intentional shutdown 已取消任务产生的 Target/Session closed 错误，其他错误继续上报。
+- 隔离 A/B canary 以相同的 20 次 Session/CDP/12-page/exact-release 负载验证：未修版出现 3115 条 Target-close 日志，新 exact 候选 20/20 健康且日志匹配为 0；Runtime full API 测试 83 passed / 2 skipped，build 通过。
+- Hermes Studio Browser 聚焦测试 187/187、Server TypeScript、production build、Harness 均通过；DNS parser 边界回归 78/78 通过，生产 `dist` 从锁定 commit 独立重建并冻结 434 文件 SHA-256 map。
+- 测试包使用唯一 ACR Studio/Runtime API/Runtime UI tag；不依赖 floating `latest`。保留 `HERMES_WRITE_SAFE_ROOT=/tmp:/opt/data:/home/agent/.hermes/workspace/`，并保持 `content/nginx.conf` 字节不变。
+- 这是待用户安装验收的测试候选；尚未合并、创建正式 Git tag、GitHub Release 或正式发布。上游后续漂移不改变本候选字节，验收通过后再同步当时最新 upstream `main`。
+- 已知依赖风险未因功能测试而消除：Runtime `npm audit --omit=dev` 在本次锁定依赖上报告 1 critical、19 high、4 moderate、2 low；需在正式发布决策前单独处置或接受风险。
+
+### 变更文件
+- `CHANGELOG.md`
+- `lzc-manifest.yml`
+- `package.yml`
+
+---
+
 ## v2026.08.04.0959
 
 ### 版本信息
