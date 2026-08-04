@@ -20,7 +20,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608041741-64059e4c
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608042031-eefbe130
     depends_on:
       - api
     healthcheck:

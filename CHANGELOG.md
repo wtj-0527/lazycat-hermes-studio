@@ -1,3 +1,29 @@
+## v2026.08.04.2031
+
+### 版本信息
+- **Hermes Studio upstream base**: `67e2cbf9b6e00400dcc8418fd3e2ec5b00154fb1`（v0.6.38 线）
+- **Hermes Studio Source**: `eefbe130a2e90a94c0b71cd6027af69c1fe6268a`
+- **Studio tree**: `6172fdebff8aca96f15310e5dcda4fde87450c1f`
+- **Studio candidate diff**: `2a84515bd556165e7bd741ce5ab5550c2dafc31a4b2cc49e50050dab39d80489`
+- **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608042031-eefbe130`
+- **Browser Runtime API**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-api:202608041511-e5eaefd6`
+- **Browser Runtime UI**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-ui:202608041511`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.2031.lpk`
+
+### 版本说明
+- 修复 BrowserPanel 使用 `object-fit: contain` 时未扣除上下或左右留白造成的人控坐标错位；画面留白不再转发点击，拖动进入留白后仍会在最后有效位置释放鼠标。
+- live-view 预览降至最多 1280×720、JPEG quality 70，并依据 CDP screencast metadata 将输入映射回完整远端 viewport，兼顾低带宽和精确点击。
+- 高频 `mousemove` 现在每个 animation frame 只转发最新位置；JPEG 解码只保留最新待绘制帧，不再追赶已过期帧。
+- 基于执行时最新 upstream `main` 重放现有 Browser commits；Browser 聚焦测试、双端 TypeScript、production build、Harness、镜像 push/pull-back 与 LPK 深验作为交付门禁。
+- 测试包不合并、不创建正式 Git tag/GitHub Release，也不代安装；由用户安装后继续验收百度登录入口坐标、验证码交互和人控延迟。
+
+### 变更文件
+- `CHANGELOG.md`
+- `lzc-manifest.yml`
+- `package.yml`
+
+---
+
 ## v2026.08.04.1741
 
 ### 版本信息
