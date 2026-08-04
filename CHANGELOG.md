@@ -1,3 +1,27 @@
+## v2026.08.04.0959
+
+### 版本信息
+- **Hermes Studio Source**: `8e9dd75b56e007277e5580e59524be55c40240d2`
+- **Studio tree**: `a88fb4e13ddf54e429c8975891d5e822a3f6062d`
+- **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608040959-8e9dd75b`
+- **Browser Runtime API**: `ghcr.io/steel-dev/steel-browser-api:latest`
+- **Browser Runtime UI**: `ghcr.io/steel-dev/steel-browser-ui:latest`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.0959.lpk`
+
+### 版本说明
+- 修复 Browser egress `CONNECT` tunnel 在客户端或上游断开时的生命周期收敛，避免 `write EPIPE` / `ECONNRESET` 冒泡至进程级 `uncaughtException` 并终止 Studio。
+- 在异步目标 DNS 解析开始前安装客户端 `error` / `close` guard，并在建立 upstream 后无监听空窗地交接给双向 tunnel guard。
+- 任一端 `error`、`close` 或已销毁状态都会幂等地停止双向 pipe 并销毁两端；正常 CONNECT 200、head 转发和双向数据流保持不变。
+- Source PR exact-head 的 Build、Playwright、Website、NPM Lockfile 与 Socket Security 检查全部成功；Browser 聚焦测试 129/129、生产构建、Server typecheck 与 Harness 均通过，exact baseline 无 candidate-only failure。
+- 保留 Packaging PR #64 最新提交中的 `HERMES_WRITE_SAFE_ROOT=/tmp:/opt/data:/home/agent/.hermes/workspace/`，并保持既有 nginx 路由配置字节不变。
+
+### 变更文件
+- `CHANGELOG.md`
+- `lzc-manifest.yml`
+- `package.yml`
+
+---
+
 ## v2026.08.04.0701
 
 ### 版本信息
