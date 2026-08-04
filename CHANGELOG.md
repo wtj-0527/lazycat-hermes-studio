@@ -1,3 +1,24 @@
+## v2026.08.04.2316
+
+### 版本信息
+- **Hermes Studio**: v0.6.38（基于冻结上游 `main` `5092cb2b2a143d3bc49c32be6b429df4b77faf57`）
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.38-main-202608042316`
+- **镜像摘要**: `sha256:1776fec94204ca85bf7177b785ab8232bc94624b328e10226df1447812957865`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.2316.lpk`
+
+### 版本说明
+- 包含群聊运行卡片隐藏 Agent 描述信息的改进（#2352）。
+- 包含 Runtime 激活失败提示及 Web UI 切换收敛（#2353）。
+- Coding Agent prompt 改为通过 stdin 传递（#2354）。
+- 移除 Group Chat 对 Codex、Claude Code、Ekko 的固定 120 秒整轮 deadline，由各 Coding Agent runtime 负责运行时控制；显式 Stop/Room interrupt 仍保留（#2357）。
+- 保留包装主线已更新的 `HERMES_WRITE_SAFE_ROOT=/tmp:/opt/data:/home/agent/.hermes/workspace/`。
+
+### 变更文件
+- package.yml：版本号 → 2026.08.04.2316
+- lzc-manifest.yml：Hermes Studio 运行镜像 → `v0.6.38-main-202608042316`
+
+---
+
 ## v2026.07.20.0050
 
 ### 版本信息
