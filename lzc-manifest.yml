@@ -27,7 +27,7 @@ services:
     environment:
       - PORT=8648
       - HERMES_HOME=/home/agent/.hermes
-      - HERMES_WRITE_SAFE_ROOT=/opt/data:/home/agent/.hermes/workspace/
+      - HERMES_WRITE_SAFE_ROOT=/tmp:/opt/data:/home/agent/.hermes/workspace/
       - WORKSPACE_BASE=/home/agent
       - HERMES_BIN=/opt/hermes/.venv/bin/hermes
       - HERMES_WEB_UI_MANAGED_GATEWAY=1
