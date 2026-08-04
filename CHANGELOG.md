@@ -1,3 +1,32 @@
+## v2026.08.04.1741
+
+### 版本信息
+- **Hermes Studio upstream base**: `1a78e89574440404e2f7e21bca69aac142df2197`（v0.6.38 线）
+- **Hermes Studio Source**: `64059e4c42bbbaf1e57444fa2517769c0f3e56e1`
+- **Studio tree**: `2aee7bc6f279991950cda1bff58b2e4118da2383`
+- **Studio candidate diff**: `7dcb6adeaa35cd0a9480b81b3667c2054f3ad5d152cebea4d399b338c551f0e6`
+- **Studio 镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:browser-runtime-202608041741-64059e4c`
+- **Browser Runtime API**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-api:202608041511-e5eaefd6`
+- **Browser Runtime UI**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-browser-runtime-ui:202608041511`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.04.1741.lpk`
+
+### 版本说明
+- 修复 BrowserPanel 冷启动在 Runtime Session 尚未建立时反复 `POST /api/browser/viewport` 返回 409；无 Session 的 viewport 同步现在为幂等空状态，且不会隐式占用 Runtime。
+- 修复 LazyCat TLS 反向代理后的 live-view WebSocket 同源校验；仅在包装层显式信任代理时读取单值 forwarded host/proto，默认上游行为仍 fail closed。
+- 畸形或缺失 WebSocket `Host` 现在仅销毁当前 upgrade socket，不消费一次性 capability，也不会让 URL 解析异常逃出并终止 Studio 服务。
+- 为一次性 Browser view capability 增加独立 nginx WebSocket location：Studio upstream 只使用 IPv4 解析并禁用普通 upstream retry；隔离 reverse-proxy gate 已验证 HTTP 101、仅一次 upgrade 和 forwarded headers 回读。
+- 修复 Browser iframe 边界上的 Panel resize 粘住：resize handle 使用 Pointer Capture，并在 pointerup、pointercancel、lostpointercapture、window blur 和 unmount 时幂等清理。
+- 补齐 EDNS OPT literal-root、reserved flags 和完整 option TLV 校验。
+- 基于执行时最新 upstream `main` 重放原 Browser commits，10/10 patch-id 一致；Browser 聚焦测试、双端 TypeScript、production build、Harness、nginx config、LPK lint 均通过。
+- 测试包不合并、不创建正式 Git tag/GitHub Release，也不代安装；由用户安装后继续验收 BrowserPanel 首帧、接管、同页交互和 exact release。
+
+### 变更文件
+- `CHANGELOG.md`
+- `lzc-manifest.yml`
+- `package.yml`
+
+---
+
 ## v2026.08.04.1511
 
 ### 版本信息
