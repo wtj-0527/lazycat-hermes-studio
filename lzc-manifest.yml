@@ -9,7 +9,7 @@ application:
   health_check:
     test_url: http://hermes-webui:8648
     start_period: 600s
-    timeout: 5s
+    timeout: 10s
 
 services:
   nginx:
@@ -20,9 +20,10 @@ services:
   hermes-webui:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.38-main-202608042316
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8648"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
       start_period: 6000s
     environment:
       - PORT=8648
