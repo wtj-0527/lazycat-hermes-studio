@@ -1,3 +1,22 @@
+## v2026.08.05.1531（测试包）
+
+### 版本信息
+- **Hermes Studio**: v0.6.38（沿用正式运行镜像）
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.38-main-202608042316`
+- **镜像摘要**: `sha256:1776fec94204ca85bf7177b785ab8232bc94624b328e10226df1447812957865`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.05.1531.lpk`
+
+### 版本说明
+- nginx Docker DNS resolver 增加 `ipv6=off`，避免解析到仅分配但未监听的 Hermes Web UI IPv6 upstream。
+- 仅包含上述 resolver 调整；Runtime 镜像、healthcheck、应用权限、挂载、持久化及多实例配置均保持不变。
+
+### 变更文件
+- package.yml：测试包版本号 → 2026.08.05.1531
+- content/nginx.conf：`resolver 127.0.0.11 valid=30s ipv6=off;`
+- CHANGELOG.md：记录测试包范围
+
+---
+
 ## v2026.08.05.1033（测试包）
 
 ### 版本信息
