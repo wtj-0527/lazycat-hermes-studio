@@ -8,8 +8,8 @@
 
 ### 版本说明
 - 包装层 healthcheck 改用显式 loopback 地址与 `/health` 路径。
-- 容器 healthcheck 调整为 `interval: 15s`、`timeout: 60s`、`retries: 5`，降低长群聊负载期间瞬时延迟导致的误报。
-- 平台级 healthcheck timeout 同步调整为 `60s`。
+- 容器 healthcheck 调整为 `interval: 15s`、`timeout: 10s`、`retries: 5`，在覆盖当前约 2.1–2.9 秒实测延迟的同时保留故障感知能力。
+- 平台级 healthcheck timeout 同步调整为 `10s`。
 - Runtime 镜像和应用权限、挂载、持久化及多实例配置均保持不变。
 - 本测试包仅用于验证包装层止血效果，不代表已修复 Hermes Studio 上游性能热点。
 

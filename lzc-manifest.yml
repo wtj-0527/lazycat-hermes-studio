@@ -9,7 +9,7 @@ application:
   health_check:
     test_url: http://hermes-webui:8648
     start_period: 600s
-    timeout: 60s
+    timeout: 10s
 
 services:
   nginx:
@@ -22,7 +22,7 @@ services:
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/health"]
       interval: 15s
-      timeout: 60s
+      timeout: 10s
       retries: 5
       start_period: 6000s
     environment:
