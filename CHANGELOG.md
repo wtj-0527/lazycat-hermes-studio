@@ -1,3 +1,25 @@
+## v2026.08.05.1033（测试包）
+
+### 版本信息
+- **Hermes Studio**: v0.6.38（沿用正式运行镜像）
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.38-main-202608042316`
+- **镜像摘要**: `sha256:1776fec94204ca85bf7177b785ab8232bc94624b328e10226df1447812957865`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.05.1033.lpk`
+
+### 版本说明
+- 包装层 healthcheck 改用显式 loopback 地址与 `/health` 路径。
+- 容器 healthcheck 调整为 `interval: 15s`、`timeout: 60s`、`retries: 5`，降低长群聊负载期间瞬时延迟导致的误报。
+- 平台级 healthcheck timeout 同步调整为 `60s`。
+- Runtime 镜像和应用权限、挂载、持久化及多实例配置均保持不变。
+- 本测试包仅用于验证包装层止血效果，不代表已修复 Hermes Studio 上游性能热点。
+
+### 变更文件
+- package.yml：测试包版本号 → 2026.08.05.1033
+- lzc-manifest.yml：调整平台级与容器级 healthcheck 容错参数
+- CHANGELOG.md：记录测试包范围和验证边界
+
+---
+
 ## v2026.08.04.2316
 
 ### 版本信息
