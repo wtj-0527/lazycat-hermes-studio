@@ -18,7 +18,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.38-main-202608042316
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.39-main-202608062012
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/health"]
       interval: 15s

@@ -1,3 +1,21 @@
+# 2026.08.06.2012
+
+## 正式发布：同步 EKKOLearnAI/hermes-studio main
+
+### 版本信息
+- **Hermes Studio**: v0.6.39（基于冻结上游 `main` `405cde9f6090e69104d0b365d9fef60d571ef9b6`）
+- **源码树**: `7accd0874f1d71d8c68d8e8d3dd06142f4a16a05`
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.39-main-202608062012`
+- **镜像摘要**: `sha256:2137ab4a96c74701ff27dbe0b62abe5e27c4221b8f58918e324c1ee5d3c71198`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.06.2012.lpk`
+
+### 说明
+- 严格使用执行时冻结的 `EKKOLearnAI/hermes-studio:main`。
+- 不包含 Draft PR #2391 或其他未合并改动。
+- 保持现有 LazyCat 多实例隔离、持久化和健康检查配置不变。
+
+---
+
 ## v2026.08.05.1531（测试包）
 
 ### 版本信息
