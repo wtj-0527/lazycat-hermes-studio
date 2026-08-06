@@ -8,7 +8,7 @@ application:
     - /
   health_check:
     test_url: http://hermes-webui:8648
-    start_period: 600s
+    start_period: 6000s
     timeout: 10s
 
 services:
