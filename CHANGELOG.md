@@ -1,3 +1,26 @@
+# 2026.08.08.0132
+
+## 正式发布：全局审批提示音
+
+### 版本信息
+- **Hermes Studio**: v0.6.39 + upstream PR #2406
+- **源码 HEAD**: `f5535a41dfdefa4f7e6bc3e6b701454a4f49c05d`
+- **源码 Tree**: `8b5fedc10324a16d28273ff5547fda1ef361095a`
+- **Patch SHA-256**: `35d2b274b850e9007c4b8c819272f54b8a0d10201ac8eb5ffbc867445c006ded`
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.39-pr2406-f5535a41-202608080111`
+- **镜像摘要**: `sha256:ed9279ffd97a7d08196ff4e294e8d2a1319220c57c7925add1455d8fdc2088ff`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.08.0132.lpk`
+
+### 发布说明
+- 新增与完成提示音独立控制的审批提示音设置。
+- Direct Chat、Group Chat 与 Workflow 的新审批请求在相关 Profile 的已连接浏览器中播放一次提示音。
+- 当前页面仅抑制重复的全局通知 UI，不抑制提示音；恢复、重复、重渲染、重新进入或已解决请求不重复播放。
+- 发送动作会在任一提示音启用时预热共享 Web Audio context，以满足浏览器自动播放策略；两项提示音均关闭时不预热。
+- 保留包装仓库当前 LazyCat 预览入口、持久化、多实例隔离、权限及健康检查契约。
+- replacement 测试 LPK `2026.08.08.0111` 已完成安装验收；本正式版本从最新包装 `main` 通过 PR 合并后重建。
+
+---
+
 # 2026.08.07.1813（测试包）
 
 ## 收敛版本预览为唯一端口前缀入口
