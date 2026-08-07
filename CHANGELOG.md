@@ -1,3 +1,24 @@
+# 2026.08.07.1726（测试包）
+
+## 修复版本预览的 LazyCat 外部访问
+
+### 版本信息
+- **Hermes Studio**: v0.6.39（沿用已验证的正式运行镜像）
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.39-main-202608062012`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.07.1726.lpk`
+
+### 版本说明
+- 仅在 LazyCat nginx 包装层将 `8651` 预览流量的上游 `Host` 改写为内部服务地址，避免 Vite `allowedHosts` 拒绝端口前缀域名。
+- 保留真实外部地址于 `X-Forwarded-Host`；正式 `8648` 和其他动态端口继续沿用原 Host。
+- 为 `/preview/` 路径补齐 Vite HMR WebSocket 转发。
+
+### 变更文件
+- `content/nginx.conf`：预览 Host 改写与 HMR 转发
+- `package.yml`：测试包版本号 → 2026.08.07.1726
+- `CHANGELOG.md`：记录测试包范围
+
+---
+
 # 2026.08.06.2012
 
 ## 正式发布：同步 EKKOLearnAI/hermes-studio main
