@@ -6,9 +6,9 @@ path = Path(sys.argv[1] if len(sys.argv) > 1 else "content/nginx.conf")
 text = path.read_text()
 required = [
     "map $upstream_port $upstream_host {",
-    "8651    hermes-webui:8651;",
+    "8651    localhost:8651;",
     "default $http_x_forwarded_host;",
-    "proxy_set_header Host hermes-webui:8651;",
+    "proxy_set_header Host localhost:8651;",
     "proxy_set_header Host $upstream_host;",
     "proxy_set_header X-Forwarded-Host $http_x_forwarded_host;",
     "proxy_http_version 1.1;",

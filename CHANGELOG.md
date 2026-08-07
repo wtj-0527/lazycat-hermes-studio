@@ -1,3 +1,25 @@
+# 2026.08.07.1749（测试包）
+
+## 修复版本预览 Host 白名单目标
+
+### 版本信息
+- **Hermes Studio**: v0.6.39（沿用已验证的正式运行镜像）
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.39-main-202608062012`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.07.1749-test.lpk`
+
+### 版本说明
+- 根据已安装 `2026.08.07.1726` 测试包的懒猫浏览器实测，将 Vite `8651` 请求的上游 Host 从仍被拒绝的 `hermes-webui:8651` 收敛为 Vite 默认信任的 `localhost:8651`。
+- `proxy_pass` 网络目标仍为 `hermes-webui:8651`，真实外部地址继续保留在 `X-Forwarded-Host`；正式 `8648` 和其他动态端口行为不变。
+- 保留 `/preview/` 的 Vite HMR WebSocket 转发。
+
+### 变更文件
+- `content/nginx.conf`：将预览 Host 改写目标改为 `localhost:8651`
+- `tests/check-preview-nginx.py`：锁定 localhost Host 契约
+- `package.yml`：测试包版本号 → 2026.08.07.1749
+- `CHANGELOG.md`：记录测试包范围
+
+---
+
 # 2026.08.07.1726（测试包）
 
 ## 修复版本预览的 LazyCat 外部访问
