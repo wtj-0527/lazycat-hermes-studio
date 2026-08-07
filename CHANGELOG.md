@@ -1,3 +1,25 @@
+# 2026.08.07.1813（测试包）
+
+## 收敛版本预览为唯一端口前缀入口
+
+### 版本信息
+- **Hermes Studio**: v0.6.39（沿用已验证的正式运行镜像）
+- **镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.39-main-202608062012`
+- **LPK 包**: `community.lazycat.app.hermes-studio-v2026.08.07.1813-test.lpk`
+
+### 版本说明
+- 懒猫浏览器实测确认 `https://8651-hermesstudio.<设备域名>/` 能正常加载预览，而同 Origin 的 `/preview/` 因 Vite HTML 使用根绝对 `@vite/client` 与 `src/main.ts` 路径，资源落到正式 `8648` 并返回 HTML，页面会永久停在加载状态。
+- 删除不可用的 `/preview/` nginx 路由，只保留端口前缀这一套完整入口；不使用 `sub_filter` 或全局劫持 Vite 根路径。
+- 保留 `8651` 的 `Host: localhost:8651`、Docker DNS 上游、其他动态端口及 WebSocket/HMR 行为。
+
+### 变更文件
+- `content/nginx.conf`：删除不可用的 `/preview/` 路由
+- `tests/check-preview-nginx.py`：禁止 `/preview/` 路由回归
+- `package.yml`：测试包版本号 → 2026.08.07.1813
+- `CHANGELOG.md`：记录真实浏览器验收结论
+
+---
+
 # 2026.08.07.1749（测试包）
 
 ## 修复版本预览 Host 白名单目标
