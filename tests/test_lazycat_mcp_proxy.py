@@ -114,6 +114,67 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
         self.assertIn("generated LazyCat MCP routes", nginx)
         self.assertEqual(catalog, [])
 
+    def test_anchors_each_resource_to_its_discovered_inode(self):
+        script = GENERATOR.read_text(encoding="utf-8")
+        self.assertIn('exec 3<"$file"', script)
+        self.assertIn("stat -Lc '%d:%i'", script)
+        self.assertIn('opened_identity" != "$expected_identity', script)
+        self.assertIn('readlink -f "/proc/$$/fd/3"', script)
+        self.assertIn('cat <&3 >"$snapshot_tmp"', script)
+        self.assertIn('exec 4<"$snapshot_tmp"', script)
+        self.assertIn('rm -f "$snapshot_tmp"', script)
+        self.assertIn('read_endpoint "/proc/$$/fd/4"', script)
+
+    def test_rejects_file_replaced_between_discovery_and_open(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            root = tmp_path / "resources" / "mcp-providers"
+            resource = root / "cloud.lazycat.app.race" / "default"
+            resource.mkdir(parents=True)
+            mcp_yaml = resource / "mcp.yml"
+            mcp_yaml.write_text("endpoint: /original\n", encoding="utf-8")
+            output = tmp_path / "generated.conf"
+            catalog_path = tmp_path / "providers.json"
+
+            bin_dir = tmp_path / "bin"
+            bin_dir.mkdir()
+            real_sort = subprocess.run(
+                ["sh", "-c", "command -v sort"],
+                check=True,
+                text=True,
+                capture_output=True,
+            ).stdout.strip()
+            sort_wrapper = bin_dir / "sort"
+            sort_wrapper.write_text(
+                "#!/bin/sh\n"
+                f'"{real_sort}" "$@"\n'
+                'replacement="${RACE_FILE}.replacement"\n'
+                "printf 'endpoint: /replaced\\n' >\"$replacement\"\n"
+                'mv "$replacement" "$RACE_FILE"\n',
+                encoding="utf-8",
+            )
+            sort_wrapper.chmod(0o755)
+
+            result = subprocess.run(
+                ["sh", str(GENERATOR)],
+                cwd=REPO,
+                env={
+                    **os.environ,
+                    "PATH": f"{bin_dir}:{os.environ['PATH']}",
+                    "RACE_FILE": str(mcp_yaml),
+                    "MCP_RESOURCE_ROOT": str(root),
+                    "MCP_NGINX_OUTPUT": str(output),
+                    "MCP_CATALOG_OUTPUT": str(catalog_path),
+                },
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("resource changed after discovery", result.stderr)
+            self.assertNotIn("cloud.lazycat.app.race", output.read_text(encoding="utf-8"))
+            self.assertEqual(json.loads(catalog_path.read_text(encoding="utf-8")), [])
+
     def test_rejects_symlinks_that_escape_or_alias_the_resource_tree(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp_path = Path(tmp)
@@ -161,6 +222,50 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
                 [(item["package_id"], item["resource_id"]) for item in catalog],
                 [("cloud.lazycat.app.symlink", "real")],
             )
+
+    def test_snapshot_path_replacement_cannot_change_parsed_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            root = tmp_path / "resources" / "mcp-providers"
+            resource = root / "cloud.lazycat.app.snapshot" / "default"
+            resource.mkdir(parents=True)
+            (resource / "mcp.yml").write_text("endpoint: /original\n", encoding="utf-8")
+            output = tmp_path / "generated.conf"
+            catalog_path = tmp_path / "providers.json"
+
+            bin_dir = tmp_path / "bin"
+            bin_dir.mkdir()
+            real_od = subprocess.run(
+                ["sh", "-c", "command -v od"], check=True, text=True, capture_output=True
+            ).stdout.strip()
+            od_wrapper = bin_dir / "od"
+            od_wrapper.write_text(
+                "#!/bin/sh\n"
+                "printf 'endpoint: /replaced\\n' >\"${TMPDIR}/lazycat-mcp-snapshot.$$\"\n"
+                f'exec "{real_od}" "$@"\n',
+                encoding="utf-8",
+            )
+            od_wrapper.chmod(0o755)
+
+            result = subprocess.run(
+                ["sh", str(GENERATOR)],
+                cwd=REPO,
+                env={
+                    **os.environ,
+                    "PATH": f"{bin_dir}:{os.environ['PATH']}",
+                    "TMPDIR": str(tmp_path),
+                    "MCP_RESOURCE_ROOT": str(root),
+                    "MCP_NGINX_OUTPUT": str(output),
+                    "MCP_CATALOG_OUTPUT": str(catalog_path),
+                },
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            nginx = output.read_text(encoding="utf-8")
+            self.assertIn("app.cloud.lazycat.app.snapshot.lzcx/original", nginx)
+            self.assertNotIn("/replaced", nginx)
 
 
 if __name__ == "__main__":
