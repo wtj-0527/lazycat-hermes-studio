@@ -159,8 +159,9 @@ while IFS="$tab" read -r file expected_identity; do
     cat >>"$nginx_tmp" <<EOF
 
 location = $proxy_path {
-    proxy_pass http://app.$package_id.lzcx$endpoint;
-    proxy_set_header X-HC-USER-TICKET \$http_x_hc_user_ticket;
+    proxy_pass http://lazycat-ticket-lease:8787/internal/proxy;
+    proxy_set_header X-Internal-Token "$MCP_INTERNAL_TOKEN";
+    proxy_set_header X-LazyCat-Target http://app.$package_id.lzcx$endpoint;
     proxy_http_version 1.1;
     proxy_buffering off;
     proxy_read_timeout 300s;

@@ -14,8 +14,21 @@ application:
 services:
   nginx:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine
+    binds:
+      - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
     setup_script: |
       sh /lzcapp/pkg/content/setup-nginx.sh
+
+  lazycat-ticket-lease:
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154
+    entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
+    environment:
+      - PORT=8787
+      - LEASE_TTL_MS=900000
+      - INTERNAL_TOKEN_FILE=/lzcapp/var/mcp-runtime/internal-token
+      - CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json
+    binds:
+      - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 
   hermes-webui:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154
