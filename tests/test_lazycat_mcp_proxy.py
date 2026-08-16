@@ -53,18 +53,20 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
                     "package_id": "cloud.lazycat.app.todolist",
                     "resource_id": "default",
                     "endpoint": "/api/mcp",
+                    "canonical_host": "app.cloud.lazycat.app.todolist.lzcx",
                     "proxy_path": "/lazycat-mcp/cloud.lazycat.app.todolist/default",
                 },
                 {
                     "package_id": "community.lazycat.czyt.smarticky",
                     "resource_id": "smarticky",
                     "endpoint": "/mcp?view=default",
+                    "canonical_host": "app.community.lazycat.czyt.smarticky.lzcx",
                     "proxy_path": "/lazycat-mcp/community.lazycat.czyt.smarticky/smarticky",
                 },
             ],
         )
 
-    def test_generates_browser_original_route_only_with_verified_identity(self):
+    def test_generates_canonical_host_for_every_provider_without_special_cases(self):
         result, _, catalog = self.run_generator([
             (
                 "cloud.lazycat.app.lazycat-agent-browser-skill",
@@ -76,17 +78,50 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIsInstance(catalog, list)
         assert isinstance(catalog, list)
-        browser, todolist = catalog
         self.assertEqual(
-            (browser["original_host_suffix"], browser["original_port"]),
-            ("manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp", 8080),
+            [(item["canonical_host"], item["endpoint"]) for item in catalog],
+            [
+                ("app.cloud.lazycat.app.lazycat-agent-browser-skill.lzcx", "/mcp"),
+                ("app.cloud.lazycat.app.todolist.lzcx", "/api/mcp"),
+            ],
         )
-        self.assertNotIn("original_host_suffix", todolist)
-        self.assertNotIn("original_port", todolist)
+        for item in catalog:
+            self.assertNotIn("original_host_suffix", item)
+            self.assertNotIn("original_port", item)
+
+    def test_emits_sorted_unique_hosts_file_for_webui_loopback_mapping(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "resources" / "mcp-providers"
+            output = Path(tmp) / "generated.conf"
+            catalog = Path(tmp) / "providers.json"
+            hosts = Path(tmp) / "hosts.txt"
+            for package_id, resource_id, endpoint in (
+                ("cloud.lazycat.app.zeta", "one", "/mcp"),
+                ("cloud.lazycat.app.alpha", "one", "/api/mcp"),
+                ("cloud.lazycat.app.alpha", "two", "/other/mcp"),
+            ):
+                target = root / package_id / resource_id
+                target.mkdir(parents=True, exist_ok=True)
+                (target / "mcp.yml").write_text(f"endpoint: {endpoint}\n")
+            result = subprocess.run(
+                ["sh", str(GENERATOR)], cwd=REPO,
+                env={**os.environ, "MCP_RESOURCE_ROOT": str(root), "MCP_NGINX_OUTPUT": str(output),
+                     "MCP_CATALOG_OUTPUT": str(catalog), "MCP_HOSTS_OUTPUT": str(hosts)},
+                text=True, capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("generated 3 provider route entries", result.stdout)
+            self.assertEqual(hosts.read_text().splitlines(), [
+                "app.cloud.lazycat.app.alpha.lzcx",
+                "app.cloud.lazycat.app.zeta.lzcx",
+            ])
 
     def test_skips_unsafe_or_malformed_resources(self):
         result, nginx, catalog = self.run_generator([
             ("cloud.lazycat.app.good", "default", "endpoint: /mcp\n"),
+            ("cloud.-bad.app", "default", "endpoint: /mcp\n"),
+            ("cloud.bad-.app", "default", "endpoint: /mcp\n"),
+            ("Cloud.lazycat.app.upper", "default", "endpoint: /mcp\n"),
             ("cloud.lazycat.app.bad", "default", "endpoint: http://attacker.invalid/mcp\n"),
             ("cloud.lazycat.app.traversal", "default", "endpoint: /api/../admin\n"),
             ("cloud.lazycat.app.encoded-dot", "default", "endpoint: /api/%2e%2e/admin\n"),
@@ -107,6 +142,9 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("cloud.lazycat.app.good", nginx)
+        self.assertNotIn("cloud.-bad.app", nginx)
+        self.assertNotIn("cloud.bad-.app", nginx)
+        self.assertNotIn("Cloud.lazycat.app.upper", nginx)
         self.assertNotIn("attacker.invalid", nginx)
         self.assertNotIn("cloud.lazycat.app.traversal", nginx)
         self.assertNotIn("cloud.lazycat.app.encoded-dot", nginx)

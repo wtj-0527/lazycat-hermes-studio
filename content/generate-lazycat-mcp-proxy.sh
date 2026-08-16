@@ -5,14 +5,16 @@ set -eu
 RESOURCE_ROOT="${MCP_RESOURCE_ROOT:-/lzcapp/run/resources/mcp-providers}"
 NGINX_OUTPUT="${MCP_NGINX_OUTPUT:-/etc/nginx/conf.d/lazycat-mcp-generated.conf}"
 CATALOG_OUTPUT="${MCP_CATALOG_OUTPUT:-/lzcapp/run/lazycat-mcp-providers.json}"
+HOSTS_OUTPUT="${MCP_HOSTS_OUTPUT:-}"
 
 mkdir -p "$(dirname "$NGINX_OUTPUT")" "$(dirname "$CATALOG_OUTPUT")"
 nginx_tmp="${NGINX_OUTPUT}.tmp.$$"
 catalog_tmp="${CATALOG_OUTPUT}.tmp.$$"
+hosts_tmp="${TMPDIR:-/tmp}/lazycat-mcp-hosts.$$"
 files_tmp="${TMPDIR:-/tmp}/lazycat-mcp-files.$$"
 snapshot_dir=$(mktemp -d "${TMPDIR:-/tmp}/lazycat-mcp.XXXXXX")
 snapshot_tmp="$snapshot_dir/mcp.yml"
-trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$files_tmp"; rm -rf "$snapshot_dir"' 0 HUP INT TERM
+trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$hosts_tmp" "$files_tmp"; rm -rf "$snapshot_dir"' 0 HUP INT TERM
 
 cat >"$nginx_tmp" <<EOF
 # generated LazyCat MCP routes; do not edit
@@ -23,6 +25,7 @@ location = /lazycat-mcp/providers.json {
 }
 EOF
 printf '[\n' >"$catalog_tmp"
+: >"$hosts_tmp"
 first=1
 
 # Parse the small, documented mcp.yml projection subset without adding a YAML
@@ -96,8 +99,22 @@ while IFS="$tab" read -r file expected_identity; do
     resource_id=${rest%%/*}
 
     case "$package_id" in
-        ''|*[!A-Za-z0-9._-]*) echo "[mcp-proxy] skip unsafe package id: $package_id" >&2; continue ;;
+        ''|*[!a-z0-9.-]*|.*|*.|*..*) echo "[mcp-proxy] skip unsafe package id: $package_id" >&2; continue ;;
     esac
+    package_labels_ok=1
+    old_ifs=$IFS
+    IFS=.
+    for label in $package_id; do
+        case "$label" in
+            ''|*[!a-z0-9-]*|-*|*-) package_labels_ok=0 ;;
+        esac
+        [ "${#label}" -le 63 ] || package_labels_ok=0
+    done
+    IFS=$old_ifs
+    if [ "$package_labels_ok" -ne 1 ]; then
+        echo "[mcp-proxy] skip unsafe package id: $package_id" >&2
+        continue
+    fi
     case "$resource_id" in
         ''|*[!A-Za-z0-9._-]*) echo "[mcp-proxy] skip unsafe resource id: $resource_id" >&2; continue ;;
     esac
@@ -155,6 +172,7 @@ while IFS="$tab" read -r file expected_identity; do
             ;;
     esac
 
+    canonical_host="app.$package_id.lzcx"
     proxy_path="/lazycat-mcp/$package_id/$resource_id"
     cat >>"$nginx_tmp" <<EOF
 
@@ -170,19 +188,20 @@ EOF
 
     if [ "$first" -eq 0 ]; then printf ',\n' >>"$catalog_tmp"; fi
     first=0
-    if [ "$package_id" = "cloud.lazycat.app.lazycat-agent-browser-skill" ] && \
-       [ "$resource_id" = "lazycat-agent-browser" ] && [ "$endpoint" = "/mcp" ]; then
-        printf '  {"package_id":"%s","resource_id":"%s","endpoint":"%s","proxy_path":"%s","original_host_suffix":"manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp","original_port":8080}' \
-            "$package_id" "$resource_id" "$endpoint" "$proxy_path" >>"$catalog_tmp"
-    else
-        printf '  {"package_id":"%s","resource_id":"%s","endpoint":"%s","proxy_path":"%s"}' \
-            "$package_id" "$resource_id" "$endpoint" "$proxy_path" >>"$catalog_tmp"
-    fi
+    printf '  {"package_id":"%s","resource_id":"%s","endpoint":"%s","canonical_host":"%s","proxy_path":"%s"}' \
+        "$package_id" "$resource_id" "$endpoint" "$canonical_host" "$proxy_path" >>"$catalog_tmp"
+    printf '%s\n' "$canonical_host" >>"$hosts_tmp"
 done <"$files_tmp"
 
 printf '\n]\n' >>"$catalog_tmp"
 mv "$nginx_tmp" "$NGINX_OUTPUT"
 mv "$catalog_tmp" "$CATALOG_OUTPUT"
+if [ -n "$HOSTS_OUTPUT" ]; then
+    mkdir -p "$(dirname "$HOSTS_OUTPUT")"
+    LC_ALL=C sort -u "$hosts_tmp" >"${HOSTS_OUTPUT}.tmp.$$"
+    mv "${HOSTS_OUTPUT}.tmp.$$" "$HOSTS_OUTPUT"
+fi
 trap - 0 HUP INT TERM
 
-echo "[mcp-proxy] generated $(grep -c '^location = /lazycat-mcp/.* {' "$NGINX_OUTPUT") route entries"
+provider_count=$(grep -c '^  {' "$CATALOG_OUTPUT" || true)
+echo "[mcp-proxy] generated $provider_count provider route entries"

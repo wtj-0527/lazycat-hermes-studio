@@ -41,21 +41,21 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("proxy_set_header X-LazyCat-Target http://app.$package_id.lzcx$endpoint", generator)
         self.assertNotRegex(generator, r"proxy_pass http://app\.\$package_id\.lzcx\$endpoint")
 
-    def test_manifest_scopes_original_url_proxy_without_global_http_proxy(self):
+    def test_manifest_dynamically_scopes_canonical_mcp_hosts_without_global_http_proxy(self):
         manifest = (ROOT / "lzc-manifest.yml").read_text()
         self.assertNotRegex(manifest, r"(?m)^\s*-\s*(?:HTTP_PROXY|http_proxy|HTTPS_PROXY|https_proxy)=")
-        self.assertIn("ORIGINAL_URL_PROXY_PORT=8080", manifest)
-        self.assertIn(
-            "ORIGINAL_MCP_HOST=wtj.manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp",
-            manifest,
-        )
+        self.assertIn("ORIGINAL_URL_PROXY_PORT=80", manifest)
+        self.assertNotIn("ORIGINAL_MCP_HOST=", manifest)
+        self.assertNotIn("wtj.manager.", manifest)
+        self.assertNotIn("lazycat-agent-browser-skill.lzcapp", manifest)
         self.assertIn("/lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime", manifest)
         self.assertNotIn("entrypoint:", yaml.safe_load(manifest)["services"]["hermes-webui"])
         self.assertIn("NODE_OPTIONS=--import=/lzcapp/pkg/content/lazycat-original-url-proxy.mjs", manifest)
         webui_setup = yaml.safe_load(manifest)["services"]["hermes-webui"]["setup_script"]
+        self.assertIn("generate-lazycat-mcp-proxy.sh", webui_setup)
+        self.assertIn("MCP_HOSTS_OUTPUT", webui_setup)
         self.assertIn("/etc/hosts", webui_setup)
         self.assertIn("127.0.0.1", webui_setup)
-        self.assertIn("ORIGINAL_MCP_HOST", webui_setup)
         proxy = (ROOT / "content" / "lazycat-original-url-proxy.mjs").read_text()
         self.assertIn("server.listen(listenPort, '127.0.0.1'", proxy)
         self.assertNotIn("0.0.0.0", proxy)

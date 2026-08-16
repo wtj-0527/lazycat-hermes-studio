@@ -58,6 +58,10 @@ class TicketLeaseTest(unittest.TestCase):
         self.port = free_port()
         self.token = "lease-test-token"
         env = os.environ.copy()
+        # Runtime NODE_OPTIONS/SOCKET_PATH from the installed wrapper must not
+        # redirect this isolated TCP fixture into the production-style UDS.
+        for name in ("NODE_OPTIONS", "SOCKET_PATH", "SOCKET_GID", "CATALOG_FILE"):
+            env.pop(name, None)
         env.update({
             "PORT": str(self.port),
             "LEASE_TTL_MS": "250",

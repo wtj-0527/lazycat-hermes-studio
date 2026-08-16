@@ -1,3 +1,15 @@
+# 2026.08.16.1608
+
+## 动态接入全部 LazyCat MCP Provider
+
+- 按官方 `lazycat-local-resource.skill` 规范扫描 `/lzcapp/run/resources/mcp-providers/<package-id>/<resource-id>/mcp.yml`，从 `package-id + endpoint` 动态生成每个独立 MCP 的 canonical `http://app.<package-id>.lzcx<endpoint>` allowlist。
+- 删除 `wtj`、Browser package、`manager` service 与 `8080` 端口特例；单实例和多实例均由 LazyCat 在 ticket 语义下通过 `.lzcx` 选择正确目标实例。
+- WebUI 容器只将实际发现的精确 canonical host 动态映射到 `127.0.0.1:80`；ticket lease sidecar 不共享该 hosts 覆盖，继续访问真实 LazyCat gateway，避免 relay 递归。
+- relay 仍仅允许 catalog 中精确 host、默认 HTTP 端口和精确 endpoint，拒绝未知 host、错误 endpoint/port、HTTPS、普通 HTTP 转发与 CONNECT，并双层剥离调用方提供的所有 `X-HC-*`。
+- MCP 配置继续由用户手动创建、编辑、禁用和删除；不会自动恢复条目，也不执行 Studio MCP CRUD/reload。
+
+---
+
 # 2026.08.16.1516（测试包）
 
 ## 修复 LazyCat 安装校验失败

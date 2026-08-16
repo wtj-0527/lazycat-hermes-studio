@@ -13,9 +13,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROXY = ROOT / "content" / "lazycat-original-url-proxy.mjs"
-PACKAGE = "cloud.lazycat.app.lazycat-agent-browser-skill"
-ORIGINAL = f"http://wtj.manager.{PACKAGE}.lzcapp:8080/mcp"
-TARGET = f"http://app.{PACKAGE}.lzcx/mcp"
+BROWSER_PACKAGE = "cloud.lazycat.app.lazycat-agent-browser-skill"
+TODO_PACKAGE = "cloud.lazycat.app.todolist"
+BROWSER_HOST = f"app.{BROWSER_PACKAGE}.lzcx"
+TODO_HOST = f"app.{TODO_PACKAGE}.lzcx"
+BROWSER_URL = f"http://{BROWSER_HOST}/mcp"
+TODO_URL = f"http://{TODO_HOST}/api/mcp"
 
 
 class UnixHTTPHandler(socketserver.StreamRequestHandler):
@@ -106,14 +109,22 @@ class OriginalUrlProxyTest(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.socket_path = str(Path(self.tmp.name) / "lease.sock")
         self.catalog_path = Path(self.tmp.name) / "providers.json"
-        self.catalog_path.write_text(json.dumps([{
-            "package_id": PACKAGE,
-            "resource_id": "lazycat-agent-browser",
-            "endpoint": "/mcp",
-            "original_host_suffix": f"manager.{PACKAGE}.lzcapp",
-            "original_port": 8080,
-            "proxy_path": f"/lazycat-mcp/{PACKAGE}/lazycat-agent-browser",
-        }]))
+        self.catalog_path.write_text(json.dumps([
+            {
+                "package_id": BROWSER_PACKAGE,
+                "resource_id": "lazycat-agent-browser",
+                "endpoint": "/mcp",
+                "canonical_host": BROWSER_HOST,
+                "proxy_path": f"/lazycat-mcp/{BROWSER_PACKAGE}/lazycat-agent-browser",
+            },
+            {
+                "package_id": TODO_PACKAGE,
+                "resource_id": "default",
+                "endpoint": "/api/mcp",
+                "canonical_host": TODO_HOST,
+                "proxy_path": f"/lazycat-mcp/{TODO_PACKAGE}/default",
+            },
+        ]))
         UnixHTTPHandler.seen = []
         self.uds = UnixServer(self.socket_path, UnixHTTPHandler)
         threading.Thread(target=self.uds.serve_forever, daemon=True).start()
@@ -125,7 +136,6 @@ class OriginalUrlProxyTest(unittest.TestCase):
         env = os.environ.copy()
         env.update({
             "ORIGINAL_URL_PROXY_PORT": str(self.port),
-            "ORIGINAL_MCP_HOST": f"wtj.manager.{PACKAGE}.lzcapp",
             "SOCKET_PATH": self.socket_path,
             "CATALOG_FILE": str(self.catalog_path),
         })
@@ -141,7 +151,7 @@ class OriginalUrlProxyTest(unittest.TestCase):
             except OSError:
                 time.sleep(.05)
         else:
-            self.fail("original URL proxy did not become ready")
+            self.fail("canonical URL proxy did not become ready")
 
     def tearDown(self):
         self.proc.terminate()
@@ -155,91 +165,56 @@ class OriginalUrlProxyTest(unittest.TestCase):
         if self.proc.stderr:
             self.proc.stderr.close()
         self.assertNotIn("x-hc-user-ticket", output.lower())
-        self.uds.shutdown()
-        self.uds.server_close()
-        self.upstream.shutdown()
-        self.upstream.server_close()
-        self.echo.shutdown()
-        self.echo.server_close()
+        self.uds.shutdown(); self.uds.server_close()
+        self.upstream.shutdown(); self.upstream.server_close()
+        self.echo.shutdown(); self.echo.server_close()
         self.tmp.cleanup()
 
-    def test_maps_original_multi_instance_url_to_exact_independent_provider(self):
-        status, headers, body = proxy_request(
-            self.port, "POST", ORIGINAL, b'{"jsonrpc":"2.0"}'
-        )
-        self.assertEqual(status, 200)
-        response_headers = {key.lower(): value for key, value in headers.items()}
-        self.assertEqual(response_headers.get("mcp-session-id"), "transparent-test")
-        request_line, seen_headers, seen_body = UnixHTTPHandler.seen[-1]
-        self.assertEqual(request_line, "POST /internal/proxy HTTP/1.1")
-        self.assertEqual(seen_headers["x-lazycat-target"], TARGET)
-        self.assertNotIn("x-hc-user-id", seen_headers)
-        self.assertNotIn("x-hc-source", seen_headers)
-        self.assertEqual(seen_body, b'{"jsonrpc":"2.0"}')
+    def test_maps_each_exact_canonical_provider_url(self):
+        for url, target in ((BROWSER_URL, BROWSER_URL), (TODO_URL, TODO_URL)):
+            with self.subTest(url=url):
+                UnixHTTPHandler.seen = []
+                status, headers, body = proxy_request(self.port, "POST", url, b'{"jsonrpc":"2.0"}')
+                self.assertEqual(status, 200)
+                self.assertEqual({k.lower(): v for k, v in headers.items()}.get("mcp-session-id"), "transparent-test")
+                request_line, seen_headers, seen_body = UnixHTTPHandler.seen[-1]
+                self.assertEqual(request_line, "POST /internal/proxy HTTP/1.1")
+                self.assertEqual(seen_headers["x-lazycat-target"], target)
+                self.assertFalse(any(name.startswith("x-hc-") for name in seen_headers))
+                self.assertEqual(seen_body, b'{"jsonrpc":"2.0"}')
 
-    def test_maps_direct_origin_form_request_after_hosts_override(self):
-        status, _, body = direct_request(
-            self.port,
-            "POST",
-            "/mcp",
-            f"wtj.manager.{PACKAGE}.lzcapp:8080",
-            b'{"jsonrpc":"2.0"}',
-        )
-        self.assertEqual(status, 200)
-        self.assertEqual(body, b'{"ok":true}')
-        _, seen_headers, seen_body = UnixHTTPHandler.seen[-1]
-        self.assertEqual(seen_headers["x-lazycat-target"], TARGET)
-        self.assertEqual(seen_body, b'{"jsonrpc":"2.0"}')
+    def test_maps_origin_form_request_after_dynamic_hosts_override(self):
+        status, _, body = direct_request(self.port, "POST", "/mcp", BROWSER_HOST, b"{}")
+        self.assertEqual((status, body), (200, b'{"ok":true}'))
+        self.assertEqual(UnixHTTPHandler.seen[-1][1]["x-lazycat-target"], BROWSER_URL)
 
     def test_strips_caller_supplied_lazycat_identity_headers(self):
-        status, _, _ = proxy_request(
-            self.port,
-            "POST",
-            ORIGINAL,
-            b"{}",
-            {"X-HC-User-ID": "forged", "X-HC-Source": "client", "X-HC-Role": "owner"},
-        )
+        status, _, _ = proxy_request(self.port, "POST", BROWSER_URL, b"{}", {
+            "X-HC-User-ID": "forged", "X-HC-Source": "client", "X-HC-Role": "owner",
+        })
         self.assertEqual(status, 200)
-        _, headers, _ = UnixHTTPHandler.seen[-1]
-        self.assertFalse(any(name.startswith("x-hc-") for name in headers))
+        self.assertFalse(any(name.startswith("x-hc-") for name in UnixHTTPHandler.seen[-1][1]))
 
-    def test_rejects_unknown_lazycat_package(self):
-        status, _, _ = proxy_request(
-            self.port, "POST", "http://wtj.manager.unknown.example.lzcapp:8080/mcp"
+    def test_rejects_unknown_host_wrong_endpoint_port_and_https(self):
+        urls = (
+            "http://app.cloud.lazycat.app.unknown.lzcx/mcp",
+            f"http://{BROWSER_HOST}/other",
+            f"http://{BROWSER_HOST}:8080/mcp",
+            f"https://{BROWSER_HOST}/mcp",
         )
-        self.assertEqual(status, 400)
-        self.assertEqual(UnixHTTPHandler.seen, [])
-
-    def test_rejects_wrong_endpoint_for_known_provider(self):
-        status, _, _ = proxy_request(self.port, "POST", ORIGINAL + "/other")
-        self.assertEqual(status, 400)
-        self.assertEqual(UnixHTTPHandler.seen, [])
-
-    def test_rejects_wrong_service_or_port_for_known_provider(self):
-        for url in (
-            f"http://wtj.worker.{PACKAGE}.lzcapp:8080/mcp",
-            f"http://wtj.manager.{PACKAGE}.lzcapp:9999/mcp",
-        ):
+        for url in urls:
             with self.subTest(url=url):
                 UnixHTTPHandler.seen = []
                 status, _, _ = proxy_request(self.port, "POST", url)
-                self.assertEqual(status, 400)
+                self.assertIn(status, (400, 403))
                 self.assertEqual(UnixHTTPHandler.seen, [])
 
-    def test_rejects_invalid_or_multi_label_user_prefix(self):
-        for prefix in (
-            "extra.wtj",
-            "-wtj",
-            "wtj-",
-            "wtj_user",
-            "a" * 64,
-        ):
-            with self.subTest(prefix=prefix):
-                UnixHTTPHandler.seen = []
-                url = f"http://{prefix}.manager.{PACKAGE}.lzcapp:8080/mcp"
-                status, _, _ = proxy_request(self.port, "POST", url)
-                self.assertEqual(status, 400)
-                self.assertEqual(UnixHTTPHandler.seen, [])
+    def test_rejects_legacy_browser_specific_url(self):
+        status, _, _ = proxy_request(
+            self.port, "POST", f"http://wtj.manager.{BROWSER_PACKAGE}.lzcapp:8080/mcp"
+        )
+        self.assertIn(status, (400, 403))
+        self.assertEqual(UnixHTTPHandler.seen, [])
 
     def test_preload_does_not_start_relay_for_unrelated_node_processes(self):
         port = free_port()
@@ -247,16 +222,12 @@ class OriginalUrlProxyTest(unittest.TestCase):
         env.update({
             "NODE_OPTIONS": f"--import={PROXY}",
             "ORIGINAL_URL_PROXY_PORT": str(port),
-            "ORIGINAL_MCP_HOST": f"wtj.manager.{PACKAGE}.lzcapp",
             "SOCKET_PATH": self.socket_path,
             "CATALOG_FILE": str(self.catalog_path),
         })
         result = subprocess.run(
-            ["node", "-e", "console.log('child-ok')"],
-            env=env,
-            text=True,
-            capture_output=True,
-            timeout=3,
+            ["node", "-e", "console.log('child-ok')"], env=env,
+            text=True, capture_output=True, timeout=3,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.strip(), "child-ok")
@@ -264,7 +235,6 @@ class OriginalUrlProxyTest(unittest.TestCase):
             socket.create_connection(("127.0.0.1", port), timeout=0.2)
 
     def test_rejects_unrelated_http(self):
-        UnixHTTPHandler.seen = []
         url = f"http://127.0.0.1:{self.upstream.server_address[1]}/ordinary"
         status, _, _ = proxy_request(self.port, "POST", url, b"plain")
         self.assertEqual(status, 403)
@@ -274,9 +244,8 @@ class OriginalUrlProxyTest(unittest.TestCase):
         for method in ("HEAD", "PUT", "PATCH", "OPTIONS"):
             with self.subTest(method=method):
                 UnixHTTPHandler.seen = []
-                url = f"http://127.0.0.1:{self.upstream.server_address[1]}/ordinary"
-                status, _, _ = proxy_request(self.port, method, url, b"plain")
-                self.assertEqual(status, 403)
+                status, _, _ = proxy_request(self.port, method, BROWSER_URL, b"plain")
+                self.assertEqual(status, 405)
                 self.assertEqual(UnixHTTPHandler.seen, [])
 
     def test_rejects_connect_tunnelling(self):
