@@ -241,6 +241,28 @@ class OriginalUrlProxyTest(unittest.TestCase):
                 self.assertEqual(status, 400)
                 self.assertEqual(UnixHTTPHandler.seen, [])
 
+    def test_preload_does_not_start_relay_for_unrelated_node_processes(self):
+        port = free_port()
+        env = os.environ.copy()
+        env.update({
+            "NODE_OPTIONS": f"--import={PROXY}",
+            "ORIGINAL_URL_PROXY_PORT": str(port),
+            "ORIGINAL_MCP_HOST": f"wtj.manager.{PACKAGE}.lzcapp",
+            "SOCKET_PATH": self.socket_path,
+            "CATALOG_FILE": str(self.catalog_path),
+        })
+        result = subprocess.run(
+            ["node", "-e", "console.log('child-ok')"],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=3,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "child-ok")
+        with self.assertRaises(OSError):
+            socket.create_connection(("127.0.0.1", port), timeout=0.2)
+
     def test_rejects_unrelated_http(self):
         UnixHTTPHandler.seen = []
         url = f"http://127.0.0.1:{self.upstream.server_address[1]}/ordinary"

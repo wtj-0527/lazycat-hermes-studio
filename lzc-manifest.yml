@@ -32,7 +32,6 @@ services:
 
   hermes-webui:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154
-    entrypoint: /bin/sh /lzcapp/pkg/content/start-hermes-with-original-url-proxy.sh
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/livez"]
       interval: 15s
@@ -43,6 +42,7 @@ services:
       - PORT=8648
       - ORIGINAL_URL_PROXY_PORT=8080
       - ORIGINAL_MCP_HOST=wtj.manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp
+      - NODE_OPTIONS=--import=/lzcapp/pkg/content/lazycat-original-url-proxy.mjs
       - SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock
       - CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json
       - HERMES_HOME=/home/agent/.hermes
@@ -166,6 +166,15 @@ services:
       if [ ! -L /root/.ssh/config ]; then
         ln -sf /home/agent/.ssh/config /root/.ssh/config
         echo '[setup] SSH config linked to /home/agent'
+      fi
+
+      # Scope the verified original browser MCP hostname to the loopback relay.
+      : "${ORIGINAL_MCP_HOST:?ORIGINAL_MCP_HOST is required}"
+      case "$ORIGINAL_MCP_HOST" in
+        *[!a-z0-9.-]*|.*|*.) echo "invalid ORIGINAL_MCP_HOST" >&2; exit 1 ;;
+      esac
+      if ! grep -Fqx "127.0.0.1 $ORIGINAL_MCP_HOST" /etc/hosts 2>/dev/null; then
+        printf '127.0.0.1 %s\n' "$ORIGINAL_MCP_HOST" >> /etc/hosts
       fi
 
 

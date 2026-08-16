@@ -3,6 +3,8 @@ import re
 import unittest
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -48,14 +50,23 @@ class AutoTicketIntegrationContract(unittest.TestCase):
             manifest,
         )
         self.assertIn("/lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime", manifest)
-        self.assertIn("start-hermes-with-original-url-proxy.sh", manifest)
-        start = (ROOT / "content" / "start-hermes-with-original-url-proxy.sh").read_text()
-        self.assertIn("/etc/hosts", start)
-        self.assertIn("127.0.0.1", start)
-        self.assertIn("ORIGINAL_MCP_HOST", start)
+        self.assertNotIn("entrypoint:", yaml.safe_load(manifest)["services"]["hermes-webui"])
+        self.assertIn("NODE_OPTIONS=--import=/lzcapp/pkg/content/lazycat-original-url-proxy.mjs", manifest)
+        webui_setup = yaml.safe_load(manifest)["services"]["hermes-webui"]["setup_script"]
+        self.assertIn("/etc/hosts", webui_setup)
+        self.assertIn("127.0.0.1", webui_setup)
+        self.assertIn("ORIGINAL_MCP_HOST", webui_setup)
         proxy = (ROOT / "content" / "lazycat-original-url-proxy.mjs").read_text()
         self.assertIn("server.listen(listenPort, '127.0.0.1'", proxy)
         self.assertNotIn("0.0.0.0", proxy)
+
+    def test_services_never_mix_setup_script_with_entrypoint_or_command(self):
+        manifest = yaml.safe_load((ROOT / "lzc-manifest.yml").read_text())
+        for name, service in manifest["services"].items():
+            if "setup_script" not in service:
+                continue
+            self.assertNotIn("entrypoint", service, name)
+            self.assertNotIn("command", service, name)
 
     def test_bootstrap_only_captures_and_renews_ticket(self):
         script = (ROOT / "content" / "lazycat-mcp-bootstrap.js").read_text()

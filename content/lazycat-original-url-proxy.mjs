@@ -2,7 +2,9 @@
 import http from 'node:http'
 
 import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { pipeline } from 'node:stream'
+import { fileURLToPath } from 'node:url'
 
 const listenPort = Number(process.env.ORIGINAL_URL_PROXY_PORT || 8080)
 const originalMcpHost = String(process.env.ORIGINAL_MCP_HOST || '').toLowerCase()
@@ -98,6 +100,12 @@ const server = http.createServer((req, res) => {
 server.on('connect', (_req, client) => {
   client.end('HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n\r\n')
 })
-server.listen(listenPort, '127.0.0.1', () => {
-  console.log('[lazycat-original-url-proxy] listening on loopback')
-})
+const modulePath = fileURLToPath(import.meta.url)
+const entryPath = process.argv[1] ? resolve(process.argv[1]) : ''
+const isDirectExecution = entryPath === modulePath
+const isHermesWebUiEntrypoint = entryPath.endsWith('/dist/server/index.js')
+if (isDirectExecution || isHermesWebUiEntrypoint) {
+  server.listen(listenPort, '127.0.0.1', () => {
+    console.log('[lazycat-original-url-proxy] listening on loopback')
+  })
+}
