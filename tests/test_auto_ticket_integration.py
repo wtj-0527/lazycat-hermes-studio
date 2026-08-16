@@ -39,13 +39,19 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("proxy_set_header X-LazyCat-Target http://app.$package_id.lzcx$endpoint", generator)
         self.assertNotRegex(generator, r"proxy_pass http://app\.\$package_id\.lzcx\$endpoint")
 
-    def test_bootstrap_manages_only_marked_entries(self):
+    def test_bootstrap_manages_only_marked_entries_through_studio_api(self):
         script = (ROOT / "content" / "lazycat-mcp-bootstrap.js").read_text()
         self.assertNotIn("_lazycat_managed", script)
         self.assertIn("isOwnedConfig", script)
         self.assertIn("/api/hermes/mcp/servers", script)
+        self.assertIn("/api/hermes/mcp/reload", script)
+        self.assertIn("hermes_api_key", script)
+        self.assertIn("hermes_active_profile_name", script)
+        self.assertIn("Authorization", script)
+        self.assertIn("X-Hermes-Profile", script)
         self.assertIn("/lazycat-mcp/providers.json", script)
         self.assertIn("/lazycat-mcp/capture", script)
+        self.assertNotIn("config.yaml", script)
         self.assertNotIn("X-HC-USER-TICKET", script)
         self.assertNotIn("document.cookie", script)
 

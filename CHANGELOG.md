@@ -1,3 +1,25 @@
+# 2026.08.16.1313（测试包）
+
+## Hermes Studio MCP 自动注册认证修复
+
+### 版本信息
+- **Hermes Studio 运行镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154`（未修改 Studio 源码或镜像）
+- **范围**: 仅 `lazycat-hermes-studio` 包装层
+
+### 修复内容
+- 修复 `2026.08.16.1231` 实装后 bootstrap 调用 Hermes Studio MCP 管理 API 未携带 Bearer 认证、导致受管 MCP 数量为 0 的缺陷。
+- 自动注册仍使用 Hermes Studio 正式控制面：`/api/hermes/mcp/servers` 与 `/api/hermes/mcp/reload`，由 Studio Agent Bridge 完成添加、删除和重载；不直接修改 `config.yaml`。
+- 复用 Studio 当前页面已存在的 `hermes_api_key` 与 `hermes_active_profile_name`，仅对 Studio MCP API附加 `Authorization` 和 `X-Hermes-Profile`；认证信息不转发到票据捕获或Provider Catalog接口。
+- 页面认证尚未就绪时最多重试约10秒，不发送未认证的Studio MCP管理请求。
+- MCP配置仍只保存固定、无票据的 `http://nginx/lazycat-mcp/...` URL；LazyCat用户票据仅保存在当前多实例sidecar内存租约。
+
+### 已执行门禁
+- Node bootstrap 单元测试4/4通过，覆盖Studio认证、Profile Header、凭据不外泄与同名用户配置保护。
+- Python包装层、安全与TOCTOU回归18/18通过。
+- LazyCat MCP、preview Nginx与真实流式代理运行验收通过。
+
+---
+
 # 2026.08.16.1231（测试包）
 
 ## LazyCat MCP 自动发现与短期票据租约

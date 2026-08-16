@@ -14,9 +14,19 @@ function isOwnedConfig(name, config) {
   return config.url === `http://nginx/lazycat-mcp/${packageId}/${resourceId}`
 }
 
-export async function syncManagedMcp(fetchImpl = fetch) {
-  const json = async (url, init) => {
-    const response = await fetchImpl(url, { credentials: 'same-origin', cache: 'no-store', ...init })
+export async function syncManagedMcp(fetchImpl = fetch, auth = {}) {
+  const apiKey = typeof auth.apiKey === 'string' ? auth.apiKey.trim() : ''
+  const profile = typeof auth.profile === 'string' && auth.profile.trim() ? auth.profile.trim() : 'default'
+  if (!apiKey) throw new Error('Studio authentication is not ready')
+
+  const json = async (url, init = {}) => {
+    const isStudioApi = url.startsWith('/api/hermes/mcp/')
+    const headers = { ...(init.headers || {}) }
+    if (isStudioApi) {
+      headers.Authorization = `Bearer ${apiKey}`
+      headers['X-Hermes-Profile'] = profile
+    }
+    const response = await fetchImpl(url, { credentials: 'same-origin', cache: 'no-store', ...init, headers })
     if (!response.ok) throw new Error(`HTTP ${response.status}`)
     if (response.status === 204) return null
     const body = await response.json()
@@ -56,7 +66,18 @@ export async function syncManagedMcp(fetchImpl = fetch) {
 
 if (typeof window !== 'undefined') {
   const capture = () => fetch('/lazycat-mcp/capture', { method: 'POST', credentials: 'same-origin', cache: 'no-store' }).catch(() => {})
-  const run = () => syncManagedMcp().catch(() => {})
+  const auth = () => ({
+    apiKey: localStorage.getItem('hermes_api_key') || '',
+    profile: localStorage.getItem('hermes_active_profile_name') || 'default',
+  })
+  let retries = 0
+  const run = async () => {
+    try {
+      await syncManagedMcp(fetch, auth())
+    } catch {
+      if (retries++ < 20) setTimeout(run, 500)
+    }
+  }
   if (navigator.locks?.request) navigator.locks.request('lazycat-managed-mcp-sync', run)
   else run()
   setInterval(capture, 5 * 60 * 1000)
