@@ -1,3 +1,13 @@
+# 2026.08.16.2029
+
+## History GROUP 折叠与键盘分页
+
+- Hermes Studio 运行镜像升级至 `v0.6.43-pr2581-30580ce3-202608162029`，严格构建自已验收的 PR #2581 commit `30580ce3b7d22bd5a0c795008d16754529f60d9a`。
+- History 的 `GROUP` 分组支持持久化折叠/展开、键盘操作与当前 Room 自动展开；“加载更多会话”继续仅在 `hasMore=true` 时显示，并可用键盘 Enter 加载下一批。
+- 未合并 Studio PR #2581，未安装或部署本 LPK。
+
+---
+
 # 2026.08.16.1608
 
 ## 动态接入全部 LazyCat MCP Provider
