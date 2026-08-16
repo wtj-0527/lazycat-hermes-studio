@@ -1,3 +1,22 @@
+# 2026.08.16.1409（测试包）
+
+## 原始独立 MCP URL 的透明 Ticket 注入
+
+### 行为边界
+- Hermes Studio 不再自动添加、更新、删除或恢复任何 MCP 条目，也不自动调用 MCP reload；所有 MCP 由用户手动配置和管理。
+- 用户可保留各个 LazyCat MCP 的原始多实例 URL，例如 `http://<user>.<service>.<package-id>.lzcapp:<port>/<endpoint>`；每个 MCP 仍是独立 Server，不聚合工具或会话。
+- Hermes WebUI 容器内新增仅监听 `127.0.0.1` 的 HTTP 出站代理。它只对实际投影目录中精确匹配的 `.lzcapp` MCP URL转换到对应 `app.<package-id>.lzcx<endpoint>`，并通过私有 UDS relay 自动附加当前用户内存 Ticket。
+- 未知 `.lzcapp` Provider 或错误 endpoint 失败关闭；普通 HTTP 原样转发且剥离 LazyCat 身份头；普通 HTTPS 使用无 Ticket CONNECT 隧道；`.lzcapp` HTTPS CONNECT 被拒绝。
+- Ticket 继续仅存在当前多实例 sidecar 内存，页面仅执行捕获与五分钟续租；不写入配置、磁盘、Catalog、日志或响应。
+
+### 已执行门禁
+- TDD RED→GREEN 覆盖原始多实例URL映射、未知Provider/错误endpoint拒绝、普通HTTP透传、HTTPS隧道和loopback绑定。
+- Node bootstrap测试4/4通过；Python包装层、安全、TOCTOU及透明代理测试24/24通过。
+- Node/Shell语法与 `git diff --check` 通过；未修改Hermes Studio运行镜像。
+- 安装后的真实原始URL MCP initialize/tools/list仍需在用户安装本测试包后验证。
+
+---
+
 # 2026.08.16.1326（测试包）
 
 ## Hermes Studio MCP 自动注册诊断日志

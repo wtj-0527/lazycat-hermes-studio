@@ -32,6 +32,7 @@ services:
 
   hermes-webui:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154
+    entrypoint: /bin/sh /lzcapp/pkg/content/start-hermes-with-original-url-proxy.sh
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/livez"]
       interval: 15s
@@ -40,6 +41,13 @@ services:
       start_period: 6000s
     environment:
       - PORT=8648
+      - HTTP_PROXY=http://127.0.0.1:18787
+      - http_proxy=http://127.0.0.1:18787
+      - NO_PROXY=127.0.0.1,localhost,nginx,hermes-webui,lazycat-ticket-lease
+      - no_proxy=127.0.0.1,localhost,nginx,hermes-webui,lazycat-ticket-lease
+      - ORIGINAL_URL_PROXY_PORT=18787
+      - SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock
+      - CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json
       - HERMES_HOME=/home/agent/.hermes
       - HERMES_WRITE_SAFE_ROOT=/tmp:/opt/data:/home/agent/.hermes/workspace/
       - WORKSPACE_BASE=/home/agent
@@ -53,6 +61,7 @@ services:
       - LC_ALL=C.UTF-8
     binds:
       - /lzcapp/var/cache:/lzcapp/cache
+      - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
       - /lzcapp/documents/{{ .S.DeployUID }}:/home/agent
 
     setup_script: |

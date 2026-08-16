@@ -1,104 +1,60 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { managedName, syncManagedMcp } from '../content/lazycat-mcp-bootstrap.js'
+import { captureTicket } from '../content/lazycat-mcp-bootstrap.js'
 
-const ok = body => ({ ok: true, status: body == null ? 204 : 200, json: async () => body })
-
-function harness(providers, servers, auth = { apiKey: 'test-studio-key', profile: 'default' }) {
-  const calls = []
+async function withLogs(run) {
+  const original = console.info
   const logs = []
-  const fetchImpl = async (url, init = {}) => {
-    calls.push({ url, method: init.method || 'GET', headers: init.headers || {}, body: init.body && JSON.parse(init.body) })
-    if (url === '/lazycat-mcp/capture') return ok(null)
-    if (url === '/lazycat-mcp/providers.json') return ok(providers)
-    if (url === '/api/hermes/mcp/servers' && !init.method) return ok({ servers })
-    return ok({ ok: true })
+  console.info = (...args) => logs.push(args)
+  try {
+    const result = await run()
+    return { result, logs }
+  } finally {
+    console.info = original
   }
-  const logger = (event, fields = {}) => logs.push({ event, fields })
-  return { calls, logs, run: () => syncManagedMcp(fetchImpl, auth, logger) }
 }
 
-const provider = { package_id: 'cloud.lazycat.app.todo', resource_id: 'default', proxy_path: '/lazycat-mcp/cloud.lazycat.app.todo/default' }
-
-test('adds a deterministic ticket-free managed server', async () => {
-  const h = harness([provider], [])
-  await h.run()
-  const add = h.calls.find(call => call.method === 'POST' && call.url === '/api/hermes/mcp/servers')
-  assert.equal(add.body.name, managedName(provider))
-  assert.deepEqual(add.body.config, { url: 'http://nginx/lazycat-mcp/cloud.lazycat.app.todo/default' })
-  const studioCalls = h.calls.filter(call => call.url.startsWith('/api/hermes/mcp/'))
-  assert.ok(studioCalls.length > 0)
-  for (const call of studioCalls) {
-    assert.equal(call.headers.Authorization, 'Bearer test-studio-key')
-    assert.equal(call.headers['X-Hermes-Profile'], 'default')
-  }
-  const wrapperCalls = h.calls.filter(call => call.url.startsWith('/lazycat-mcp/'))
-  for (const call of wrapperCalls) {
-    assert.equal(call.headers.Authorization, undefined)
-    assert.equal(call.headers['X-Hermes-Profile'], undefined)
-  }
-  assert.equal(h.calls.at(-1).url, '/api/hermes/mcp/reload')
-})
-
-test('logs bounded stage and count summaries without credentials or payloads', async () => {
-  const h = harness([provider], [])
-  await h.run()
-  assert.deepEqual(h.logs.map(item => item.event), [
-    'sync.start',
-    'capture.ok',
-    'catalog.ok',
-    'studio.list.ok',
-    'studio.add.ok',
-    'studio.reload.ok',
-    'sync.complete',
-  ])
-  assert.deepEqual(h.logs.find(item => item.event === 'catalog.ok').fields, { providers: 1 })
-  assert.deepEqual(h.logs.find(item => item.event === 'sync.complete').fields, { providers: 1, existing: 0, added: 1, updated: 0, removed: 0, reloaded: true })
-  const rendered = JSON.stringify(h.logs)
-  assert.equal(rendered.includes('test-studio-key'), false)
-  assert.equal(rendered.includes('Authorization'), false)
-  assert.equal(rendered.includes(provider.proxy_path), false)
-})
-
-test('does not call Studio management API until Studio auth is available', async () => {
-  const h = harness([provider], [], { apiKey: '', profile: 'default' })
-  await assert.rejects(h.run(), /Studio authentication is not ready/)
-  assert.equal(h.calls.some(call => call.url.startsWith('/api/hermes/mcp/')), false)
-})
-
-test('recognizes managed package IDs containing underscores', async () => {
-  const underscored = {
-    package_id: 'cloud.lazycat.app.foo_bar',
-    resource_id: 'default',
-    proxy_path: '/lazycat-mcp/cloud.lazycat.app.foo_bar/default',
-  }
-  const name = managedName(underscored)
-  const h = harness([], [{
-    name,
-    raw_config: { url: 'http://nginx/lazycat-mcp/cloud.lazycat.app.foo_bar/default' },
+test('captures a ticket context without sending Studio credentials', async () => {
+  const calls = []
+  const { result, logs } = await withLogs(() => captureTicket(async (url, init) => {
+    calls.push({ url, init })
+    return { ok: true, status: 204 }
+  }))
+  assert.equal(result, true)
+  assert.deepEqual(calls, [{
+    url: '/lazycat-mcp/capture',
+    init: { method: 'POST', credentials: 'same-origin', cache: 'no-store' },
   }])
-  await h.run()
-  assert.equal(h.calls.some(call => call.method === 'DELETE' && call.url.endsWith(encodeURIComponent(name))), true)
-  assert.equal(h.calls.at(-1).url, '/api/hermes/mcp/reload')
+  assert.deepEqual(logs, [['[lazycat-mcp]', 'capture.ok', { status: 204 }]])
+  const rendered = JSON.stringify({ calls, logs })
+  assert.equal(rendered.includes('Authorization'), false)
+  assert.equal(rendered.includes('X-Hermes-Profile'), false)
+  assert.equal(rendered.includes('X-HC-USER-TICKET'), false)
 })
 
-test('does not overwrite an unmarked colliding user server', async () => {
-  const name = managedName(provider)
-  const h = harness([provider], [{ name, raw_config: { url: 'http://user.example/mcp' } }])
-  await h.run()
-  assert.equal(h.calls.some(call => ['PATCH', 'DELETE'].includes(call.method)), false)
-  assert.equal(h.calls.some(call => call.url === '/api/hermes/mcp/reload'), false)
+test('logs a bounded renewal success event', async () => {
+  const { result, logs } = await withLogs(() => captureTicket(
+    async () => ({ ok: true, status: 204 }),
+    'capture.renew.ok',
+  ))
+  assert.equal(result, true)
+  assert.deepEqual(logs, [['[lazycat-mcp]', 'capture.renew.ok', { status: 204 }]])
 })
 
-test('updates a marked managed server and removes only marked orphans', async () => {
-  const name = managedName(provider)
-  const h = harness([provider], [
-    { name, raw_config: { url: 'http://nginx/lazycat-mcp/cloud.lazycat.app.todo/default' } },
-    { name: 'lazycat-projected--orphan--default', raw_config: { url: 'http://nginx/lazycat-mcp/orphan/default' } },
-    { name: 'lazycat-projected--user', raw_config: { url: 'http://user.example/mcp' } },
-  ])
-  await h.run()
-  assert.equal(h.calls.some(call => call.method === 'PATCH'), false)
-  assert.equal(h.calls.some(call => call.method === 'DELETE' && call.url.endsWith('lazycat-projected--orphan--default')), true)
-  assert.equal(h.calls.some(call => call.url.endsWith('lazycat-projected--user') && ['PATCH', 'DELETE'].includes(call.method)), false)
+test('logs only status when capture is rejected', async () => {
+  const { result, logs } = await withLogs(() => captureTicket(
+    async () => ({ ok: false, status: 403, text: async () => 'secret response body' }),
+  ))
+  assert.equal(result, false)
+  assert.deepEqual(logs, [['[lazycat-mcp]', 'capture.failed', { status: 403 }]])
+  assert.equal(JSON.stringify(logs).includes('secret response body'), false)
+})
+
+test('logs a bounded category for network errors', async () => {
+  const { result, logs } = await withLogs(() => captureTicket(async () => {
+    throw new Error('credential-bearing network detail')
+  }, 'capture.renew.ok'))
+  assert.equal(result, false)
+  assert.deepEqual(logs, [['[lazycat-mcp]', 'capture.renew.failed', { category: 'network_error' }]])
+  assert.equal(JSON.stringify(logs).includes('credential-bearing'), false)
 })
