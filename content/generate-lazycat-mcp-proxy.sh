@@ -10,8 +10,9 @@ mkdir -p "$(dirname "$NGINX_OUTPUT")" "$(dirname "$CATALOG_OUTPUT")"
 nginx_tmp="${NGINX_OUTPUT}.tmp.$$"
 catalog_tmp="${CATALOG_OUTPUT}.tmp.$$"
 files_tmp="${TMPDIR:-/tmp}/lazycat-mcp-files.$$"
-snapshot_tmp="${TMPDIR:-/tmp}/lazycat-mcp-snapshot.$$"
-trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$files_tmp" "$snapshot_tmp"' 0 HUP INT TERM
+snapshot_dir=$(mktemp -d "${TMPDIR:-/tmp}/lazycat-mcp.XXXXXX")
+snapshot_tmp="$snapshot_dir/mcp.yml"
+trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$files_tmp"; rm -rf "$snapshot_dir"' 0 HUP INT TERM
 
 cat >"$nginx_tmp" <<EOF
 # generated LazyCat MCP routes; do not edit
@@ -127,12 +128,21 @@ while IFS="$tab" read -r file expected_identity; do
     fi
     exec 3<&-
 
-    if ! endpoint=$(read_endpoint "$snapshot_tmp"); then
+    # Pin the private snapshot to an FD and unlink its pathname before parsing.
+    # Both validation passes reopen this descriptor through procfs, so pathname
+    # replacement cannot change the bytes between validation and parsing.
+    if ! exec 4<"$snapshot_tmp"; then
         rm -f "$snapshot_tmp"
-        echo "[mcp-proxy] skip $package_id/$resource_id: malformed or unsupported mcp.yml" >&2
+        echo "[mcp-proxy] skip $package_id/$resource_id: cannot open snapshot" >&2
         continue
     fi
     rm -f "$snapshot_tmp"
+    if ! endpoint=$(read_endpoint "/proc/$$/fd/4"); then
+        exec 4<&-
+        echo "[mcp-proxy] skip $package_id/$resource_id: malformed or unsupported mcp.yml" >&2
+        continue
+    fi
+    exec 4<&-
 
     case "$endpoint" in
         /*) ;;
