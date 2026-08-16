@@ -4,7 +4,8 @@ import http from 'node:http'
 import { readFileSync } from 'node:fs'
 import { pipeline } from 'node:stream'
 
-const listenPort = Number(process.env.ORIGINAL_URL_PROXY_PORT || 18787)
+const listenPort = Number(process.env.ORIGINAL_URL_PROXY_PORT || 8080)
+const originalMcpHost = String(process.env.ORIGINAL_MCP_HOST || '').toLowerCase()
 const socketPath = process.env.SOCKET_PATH || '/lzcapp/var/mcp-runtime/lease.sock'
 const catalogFile = process.env.CATALOG_FILE || '/lzcapp/var/mcp-runtime/providers.json'
 
@@ -46,6 +47,9 @@ function targetFor(rawUrl) {
     if (!Number.isInteger(provider.original_port) || provider.original_port < 1 || provider.original_port > 65535) continue
     const suffix = `.${provider.original_host_suffix}`
     if (!url.hostname.endsWith(suffix) || url.hostname.length <= suffix.length) continue
+    const userPrefix = url.hostname.slice(0, -suffix.length)
+    if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(userPrefix)) continue
+    if (originalMcpHost && url.hostname !== originalMcpHost) continue
     if (Number(url.port || 80) !== provider.original_port) continue
     if (url.pathname + url.search !== provider.endpoint) continue
     return `http://app.${provider.package_id}.lzcx${provider.endpoint}`
@@ -79,7 +83,10 @@ function relay(req, res, target) {
 
 const server = http.createServer((req, res) => {
   let url
-  try { url = new URL(req.url || '') } catch { return send(res, 400) }
+  try {
+    const raw = req.url || ''
+    url = new URL(raw.startsWith('http://') || raw.startsWith('https://') ? raw : `http://${req.headers.host || ''}${raw}`)
+  } catch { return send(res, 400) }
   const target = targetFor(url.href)
   if (target) {
     if (!['GET', 'POST', 'DELETE'].includes(req.method || '')) return send(res, 405)

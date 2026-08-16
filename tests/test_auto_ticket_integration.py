@@ -39,12 +39,20 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("proxy_set_header X-LazyCat-Target http://app.$package_id.lzcx$endpoint", generator)
         self.assertNotRegex(generator, r"proxy_pass http://app\.\$package_id\.lzcx\$endpoint")
 
-    def test_manifest_runs_loopback_original_url_proxy_inside_hermes(self):
+    def test_manifest_scopes_original_url_proxy_without_global_http_proxy(self):
         manifest = (ROOT / "lzc-manifest.yml").read_text()
-        self.assertIn("HTTP_PROXY=http://127.0.0.1:18787", manifest)
-        self.assertIn("http_proxy=http://127.0.0.1:18787", manifest)
+        self.assertNotRegex(manifest, r"(?m)^\s*-\s*(?:HTTP_PROXY|http_proxy|HTTPS_PROXY|https_proxy)=")
+        self.assertIn("ORIGINAL_URL_PROXY_PORT=8080", manifest)
+        self.assertIn(
+            "ORIGINAL_MCP_HOST=wtj.manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp",
+            manifest,
+        )
         self.assertIn("/lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime", manifest)
         self.assertIn("start-hermes-with-original-url-proxy.sh", manifest)
+        start = (ROOT / "content" / "start-hermes-with-original-url-proxy.sh").read_text()
+        self.assertIn("/etc/hosts", start)
+        self.assertIn("127.0.0.1", start)
+        self.assertIn("ORIGINAL_MCP_HOST", start)
         proxy = (ROOT / "content" / "lazycat-original-url-proxy.mjs").read_text()
         self.assertIn("server.listen(listenPort, '127.0.0.1'", proxy)
         self.assertNotIn("0.0.0.0", proxy)
