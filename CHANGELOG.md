@@ -1,26 +1,3 @@
-# 2026.08.16.1305（测试包）
-
-## LazyCat MCP 启动时自动注入修复
-
-### 版本信息
-- **Hermes Studio 运行镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154`（未修改 Studio 源码或镜像）
-- **范围**: 仅 `lazycat-hermes-studio` 包装层
-
-### 修复内容
-- 修复 `2026.08.16.1231` 实装后浏览器 bootstrap 无法稳定取得 Studio Bearer 认证、导致受管 MCP 数量为 0 的缺陷。
-- 改为在 Studio 进程启动前读取严格校验的 `mcp-providers` 投影，并原子合并到 `~/.hermes/config.yaml`；配置仅含固定、无票据的 `http://nginx/lazycat-mcp/...` URL。
-- 保留用户自建同名配置和受管条目的显式 `enabled: false`；只删除名称与固定 URL 同时满足所有权规则的孤儿条目。
-- 浏览器 bootstrap 只负责捕获和续租短期票据，不再调用 Studio MCP 管理 API。
-- Catalog 非法、配置根结构异常或现有配置不可读时失败关闭，不以空配置覆盖用户文件。
-
-### 已执行门禁
-- Python 包装层、安全、TOCTOU 与配置注入回归 24/24 通过。
-- Node bootstrap 单元测试 2/2 通过。
-- LazyCat MCP、preview Nginx 与真实流式代理运行验收通过。
-- 目标 Studio 运行镜像内注入演练通过：用户配置保留、受管项生成、二次运行字节幂等。
-
----
-
 # 2026.08.16.1231（测试包）
 
 ## LazyCat MCP 自动发现与短期票据租约
