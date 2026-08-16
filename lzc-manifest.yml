@@ -14,8 +14,21 @@ application:
 services:
   nginx:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine
+    binds:
+      - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
     setup_script: |
       sh /lzcapp/pkg/content/setup-nginx.sh
+
+  lazycat-ticket-lease:
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154
+    entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
+    environment:
+      - SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock
+      - SOCKET_GID=101
+      - LEASE_TTL_MS=900000
+      - CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json
+    binds:
+      - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 
   hermes-webui:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154
@@ -27,6 +40,10 @@ services:
       start_period: 6000s
     environment:
       - PORT=8648
+      - ORIGINAL_URL_PROXY_PORT=80
+      - NODE_OPTIONS=--import=/lzcapp/pkg/content/lazycat-original-url-proxy.mjs
+      - SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock
+      - CATALOG_FILE=/tmp/lazycat-mcp-providers.json
       - HERMES_HOME=/home/agent/.hermes
       - HERMES_WRITE_SAFE_ROOT=/tmp:/opt/data:/home/agent/.hermes/workspace/
       - WORKSPACE_BASE=/home/agent
@@ -40,6 +57,7 @@ services:
       - LC_ALL=C.UTF-8
     binds:
       - /lzcapp/var/cache:/lzcapp/cache
+      - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
       - /lzcapp/documents/{{ .S.DeployUID }}:/home/agent
 
     setup_script: |
@@ -148,6 +166,30 @@ services:
         ln -sf /home/agent/.ssh/config /root/.ssh/config
         echo '[setup] SSH config linked to /home/agent'
       fi
+
+      # Discover every projected MCP provider and scope only its canonical .lzcx
+      # hostname to this container's loopback relay. The ticket sidecar remains
+      # outside this hosts file and therefore reaches the real LazyCat gateway.
+      MCP_HOSTS_FILE=/tmp/lazycat-mcp-hosts
+      MCP_NGINX_OUTPUT=/tmp/lazycat-mcp-unused.conf \
+      MCP_CATALOG_OUTPUT=/tmp/lazycat-mcp-providers.json \
+      MCP_HOSTS_OUTPUT="$MCP_HOSTS_FILE" \
+        sh /lzcapp/pkg/content/generate-lazycat-mcp-proxy.sh
+      HOSTS_CLEAN=/tmp/lazycat-hosts-clean
+      awk '
+        $0 == "# BEGIN HERMES LAZYCAT MCP" { managed=1; next }
+        $0 == "# END HERMES LAZYCAT MCP" { managed=0; next }
+        !managed { print }
+      ' /etc/hosts >"$HOSTS_CLEAN"
+      {
+        cat "$HOSTS_CLEAN"
+        echo "# BEGIN HERMES LAZYCAT MCP"
+        while IFS= read -r host; do
+          [ -n "$host" ] && printf '127.0.0.1 %s\n' "$host"
+        done <"$MCP_HOSTS_FILE"
+        echo "# END HERMES LAZYCAT MCP"
+      } > /etc/hosts
+      rm -f "$HOSTS_CLEAN" "$MCP_HOSTS_FILE" /tmp/lazycat-mcp-unused.conf
 
 
 

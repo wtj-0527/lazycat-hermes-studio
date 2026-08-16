@@ -1,3 +1,110 @@
+# 2026.08.16.1608
+
+## 动态接入全部 LazyCat MCP Provider
+
+- 按官方 `lazycat-local-resource.skill` 规范扫描 `/lzcapp/run/resources/mcp-providers/<package-id>/<resource-id>/mcp.yml`，从 `package-id + endpoint` 动态生成每个独立 MCP 的 canonical `http://app.<package-id>.lzcx<endpoint>` allowlist。
+- 删除 `wtj`、Browser package、`manager` service 与 `8080` 端口特例；单实例和多实例均由 LazyCat 在 ticket 语义下通过 `.lzcx` 选择正确目标实例。
+- WebUI 容器只将实际发现的精确 canonical host 动态映射到 `127.0.0.1:80`；ticket lease sidecar 不共享该 hosts 覆盖，继续访问真实 LazyCat gateway，避免 relay 递归。
+- relay 仍仅允许 catalog 中精确 host、默认 HTTP 端口和精确 endpoint，拒绝未知 host、错误 endpoint/port、HTTPS、普通 HTTP 转发与 CONNECT，并双层剥离调用方提供的所有 `X-HC-*`。
+- MCP 配置继续由用户手动创建、编辑、禁用和删除；不会自动恢复条目，也不执行 Studio MCP CRUD/reload。
+
+---
+
+# 2026.08.16.1516（测试包）
+
+## 修复 LazyCat 安装校验失败
+
+- `2026.08.16.1409` 在 nasw 安装时被 LazyCat 拒绝，原因为 `hermes-webui` 同时包含 `setup_script` 与自定义 `entrypoint`，平台报错 `cannot define both init and entrypoint/command`；该版本撤回，不应继续安装。
+- 保留原有 rootfs 持久化 `setup_script`，删除冲突的 WebUI `entrypoint`。
+- 使用 Node 原生 `NODE_OPTIONS=--import=/lzcapp/pkg/content/lazycat-original-url-proxy.mjs` 在原启动进程内加载 scoped loopback relay；原始主机映射并入现有 `setup_script`。relay 仅在 Hermes WebUI 主 Entrypoint 或直接测试时启动，无关 Node 子进程不会重复绑定端口。
+- 新增安装结构回归：任何包含 `setup_script` 的服务禁止同时定义 `entrypoint` 或 `command`；完整 Node 测试4/4、Python测试33/33及目标镜像原Entrypoint运行验收通过。
+
+---
+
+# 2026.08.16.1409（撤回：安装失败）
+
+## 原始独立 MCP URL 的透明 Ticket 注入
+
+### 行为边界
+- Hermes Studio 不再自动添加、更新、删除或恢复任何 MCP 条目，也不自动调用 MCP reload；所有 MCP 由用户手动配置和管理。
+- 本测试包只透明接管已经从目标 LazyCat 实机 manifest 核验的浏览器 MCP 原始多实例 URL：`http://<user>.manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp:8080/mcp`。该 MCP 在 Studio 中仍是独立 Server，不聚合工具或会话。
+- Hermes WebUI 容器仅将已核验的浏览器 MCP 原始主机名映射到 `127.0.0.1`，并在原始端口 `8080` 启动专用 loopback relay；不设置全局 `HTTP_PROXY`，不影响 Provider、OAuth 或其他集成流量。relay 必须同时精确匹配单标签用户前缀、Catalog service host suffix、port 和 endpoint，才转换到对应 `app.<package-id>.lzcx<endpoint>`，并通过私有 UDS relay 自动附加当前用户内存 Ticket。
+- 未知 Provider、错误 service、port 或 endpoint 全部失败关闭；代理拒绝普通 HTTP 与所有 CONNECT，不具备通用转发或 SSRF 能力。其他 MCP 在没有可信 service/port 元数据前不进入透明接管 allowlist。
+- 两层 relay 均剥离调用方提供的全部 `X-HC-*` 身份头，仅由最内层 lease 注入当前内存 Ticket。
+- Ticket 继续仅存在当前多实例 sidecar 内存，页面仅执行捕获与五分钟续租；不写入配置、磁盘、Catalog、日志或响应。
+
+### 已执行门禁
+- TDD RED→GREEN 覆盖原始多实例URL映射、direct origin-form 请求、严格单标签用户前缀、未知Provider、错误service/port/endpoint拒绝、普通HTTP与CONNECT拒绝、双层 `X-HC-*` 剥离和loopback绑定。
+- Node bootstrap测试4/4通过；Python包装层、安全、TOCTOU及透明代理测试31/31通过。
+- Preview Nginx、runtime lease、静态安全契约、Node/Shell语法与 `git diff --check` 通过；未修改Hermes Studio运行镜像。
+- `lzc-cli project lint` 退出0，保留6条既有策略警告。
+- 安装后的真实浏览器原始URL MCP initialize/tools/list仍需在用户安装本测试包后验证。
+
+---
+
+# 2026.08.16.1326（测试包）
+
+## Hermes Studio MCP 自动注册诊断日志
+
+### 修复与可观测性
+- 沿用 Hermes Studio 正式 MCP 管理接口认证修复，不直接修改 `config.yaml`。
+- 统一受管项所有权判断与生成器的 package ID 字符集，正确识别包含下划线的合法投影，避免旧注册项无法更新或清理。
+- 浏览器控制台以固定前缀 `[lazycat-mcp]` 输出分阶段日志：bootstrap加载、认证等待/重试、ticket capture、Provider Catalog、Studio MCP列表、add/update/remove、reload和最终完成。
+- 日志仅包含阶段名、计数、HTTP状态、错误类别、重试次数与延迟；不打印Studio token、LazyCat ticket、用户ID、服务URL、Provider完整配置或响应正文。
+- ticket续租单独记录成功状态或受限错误类别，便于区分初始化完成后续租失败。
+
+### 已执行门禁
+- Node bootstrap单元测试6/6通过，覆盖固定阶段、计数、凭据/配置不泄漏、Studio认证、用户配置保护与下划线package ID回归。
+- Python包装层、安全与TOCTOU回归18/18通过。
+- LazyCat MCP、preview Nginx与runtime验收通过；`git diff --check`及Node语法检查通过。
+
+---
+
+# 2026.08.16.1313（测试包）
+
+## Hermes Studio MCP 自动注册认证修复
+
+### 版本信息
+- **Hermes Studio 运行镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154`（未修改 Studio 源码或镜像）
+- **范围**: 仅 `lazycat-hermes-studio` 包装层
+
+### 修复内容
+- 修复 `2026.08.16.1231` 实装后 bootstrap 调用 Hermes Studio MCP 管理 API 未携带 Bearer 认证、导致受管 MCP 数量为 0 的缺陷。
+- 自动注册仍使用 Hermes Studio 正式控制面：`/api/hermes/mcp/servers` 与 `/api/hermes/mcp/reload`，由 Studio Agent Bridge 完成添加、删除和重载；不直接修改 `config.yaml`。
+- 复用 Studio 当前页面已存在的 `hermes_api_key` 与 `hermes_active_profile_name`，仅对 Studio MCP API附加 `Authorization` 和 `X-Hermes-Profile`；认证信息不转发到票据捕获或Provider Catalog接口。
+- 页面认证尚未就绪时最多重试约10秒，不发送未认证的Studio MCP管理请求。
+- MCP配置仍只保存固定、无票据的 `http://nginx/lazycat-mcp/...` URL；LazyCat用户票据仅保存在当前多实例sidecar内存租约。
+
+### 已执行门禁
+- Node bootstrap 单元测试4/4通过，覆盖Studio认证、Profile Header、凭据不外泄与同名用户配置保护。
+- Python包装层、安全与TOCTOU回归18/18通过。
+- LazyCat MCP、preview Nginx与真实流式代理运行验收通过。
+
+---
+
+# 2026.08.16.1231（测试包）
+
+## LazyCat MCP 自动发现与短期票据租约
+
+### 版本信息
+- **Hermes Studio 运行镜像**: `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.42-pr2572-pr2573-be14355f-20260816015154`（未修改 Studio 源码或镜像）
+- **包装基线**: `2e66584bb9424fb47a42132a0137f8481f46bfcd`
+- **范围**: 仅 `lazycat-hermes-studio` 包装层
+
+### 测试目标
+- 用户正常打开 Hermes Studio 后，由 LazyCat ingress 在同源 capture 请求上提供 `X-HC-USER-TICKET`；包装层仅在当前多实例容器组内存中保存 15 分钟短期租约。
+- 自动读取导入的 `mcp-providers` 投影，为 Hermes Profile 添加无凭据、使用保留名称与固定内部 URL 的 MCP 条目；仅对名称和 URL 均严格匹配的条目执行更新或孤儿清理，不覆盖用户配置。
+- Nginx 与租约 sidecar 仅通过当前实例私有 Unix socket 通信；socket 使用目标 Nginx worker 组 `root:101` 与 `0660` 权限，运行目录为 `0750`；后台 MCP 请求只允许生成 Catalog 中的精确 `.lzcx` 目标；无租约、租约过期、用户不一致或上游认证失败时失败关闭。
+- 用户票据不写入配置、磁盘、数据库、Catalog、Nginx生成文件、日志或响应。
+
+### 已执行门禁
+- Node bootstrap 单元测试 3/3 通过。
+- Python包装层、安全与TOCTOU回归 18/18 通过。
+- 既有 LazyCat MCP 和 preview Nginx集成契约通过。
+- 真实流式代理运行验收通过；现有 Studio镜像可用覆盖 entrypoint启动租约服务并返回健康状态。
+
+---
+
 # 2026.08.08.0132
 
 ## 正式发布：全局审批提示音

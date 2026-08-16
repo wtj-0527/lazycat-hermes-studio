@@ -5,9 +5,13 @@ set -e
 NGINX_CONF="/etc/nginx/nginx.conf"
 SOURCE_CONF="/lzcapp/pkg/content/nginx.conf"
 MCP_PROXY_GENERATOR="/lzcapp/pkg/content/generate-lazycat-mcp-proxy.sh"
+MCP_RUNTIME_DIR="/lzcapp/var/mcp-runtime"
 
-# 确保目录存在
-mkdir -p /etc/nginx
+# Unix socket 与无凭据 provider catalog 只在 Nginx 和租约 sidecar 间共享。
+mkdir -p /etc/nginx "$MCP_RUNTIME_DIR"
+chown 0:101 "$MCP_RUNTIME_DIR"
+chmod 0750 "$MCP_RUNTIME_DIR"
+export MCP_CATALOG_OUTPUT="$MCP_RUNTIME_DIR/providers.json"
 
 # 复制配置
 if [ -f "$SOURCE_CONF" ]; then
@@ -26,6 +30,8 @@ fi
 # 只从 LazyCat 运行时投影的 mcp.yml 生成 allowlist 路由。
 if [ -f "$MCP_PROXY_GENERATOR" ]; then
     sh "$MCP_PROXY_GENERATOR"
+    chown 0:101 "$MCP_CATALOG_OUTPUT"
+    chmod 0640 "$MCP_CATALOG_OUTPUT"
 else
     echo "[setup] WARNING: MCP proxy generator not found"
 fi
