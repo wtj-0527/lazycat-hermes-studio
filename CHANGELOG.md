@@ -1,3 +1,19 @@
+# 2026.08.16.1326（测试包）
+
+## Hermes Studio MCP 自动注册诊断日志
+
+### 修复与可观测性
+- 沿用 Hermes Studio 正式 MCP 管理接口认证修复，不直接修改 `config.yaml`。
+- 浏览器控制台以固定前缀 `[lazycat-mcp]` 输出分阶段日志：bootstrap加载、认证等待/重试、ticket capture、Provider Catalog、Studio MCP列表、add/update/remove、reload和最终完成。
+- 日志仅包含阶段名、计数、HTTP状态、错误类别、重试次数与延迟；不打印Studio token、LazyCat ticket、用户ID、服务URL、Provider完整配置或响应正文。
+- ticket续租单独记录成功状态或受限错误类别，便于区分初始化完成后续租失败。
+
+### 已执行门禁
+- 日志TDD覆盖固定阶段、计数和凭据/配置不泄漏。
+- 完整Node、Python、LazyCat MCP、preview Nginx与runtime验收将在冻结候选上复跑。
+
+---
+
 # 2026.08.16.1313（测试包）
 
 ## Hermes Studio MCP 自动注册认证修复

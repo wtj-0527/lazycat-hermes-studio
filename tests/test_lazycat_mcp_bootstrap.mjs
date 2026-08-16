@@ -6,6 +6,7 @@ const ok = body => ({ ok: true, status: body == null ? 204 : 200, json: async ()
 
 function harness(providers, servers, auth = { apiKey: 'test-studio-key', profile: 'default' }) {
   const calls = []
+  const logs = []
   const fetchImpl = async (url, init = {}) => {
     calls.push({ url, method: init.method || 'GET', headers: init.headers || {}, body: init.body && JSON.parse(init.body) })
     if (url === '/lazycat-mcp/capture') return ok(null)
@@ -13,7 +14,8 @@ function harness(providers, servers, auth = { apiKey: 'test-studio-key', profile
     if (url === '/api/hermes/mcp/servers' && !init.method) return ok({ servers })
     return ok({ ok: true })
   }
-  return { calls, run: () => syncManagedMcp(fetchImpl, auth) }
+  const logger = (event, fields = {}) => logs.push({ event, fields })
+  return { calls, logs, run: () => syncManagedMcp(fetchImpl, auth, logger) }
 }
 
 const provider = { package_id: 'cloud.lazycat.app.todo', resource_id: 'default', proxy_path: '/lazycat-mcp/cloud.lazycat.app.todo/default' }
@@ -36,6 +38,26 @@ test('adds a deterministic ticket-free managed server', async () => {
     assert.equal(call.headers['X-Hermes-Profile'], undefined)
   }
   assert.equal(h.calls.at(-1).url, '/api/hermes/mcp/reload')
+})
+
+test('logs bounded stage and count summaries without credentials or payloads', async () => {
+  const h = harness([provider], [])
+  await h.run()
+  assert.deepEqual(h.logs.map(item => item.event), [
+    'sync.start',
+    'capture.ok',
+    'catalog.ok',
+    'studio.list.ok',
+    'studio.add.ok',
+    'studio.reload.ok',
+    'sync.complete',
+  ])
+  assert.deepEqual(h.logs.find(item => item.event === 'catalog.ok').fields, { providers: 1 })
+  assert.deepEqual(h.logs.find(item => item.event === 'sync.complete').fields, { providers: 1, existing: 0, added: 1, updated: 0, removed: 0, reloaded: true })
+  const rendered = JSON.stringify(h.logs)
+  assert.equal(rendered.includes('test-studio-key'), false)
+  assert.equal(rendered.includes('Authorization'), false)
+  assert.equal(rendered.includes(provider.proxy_path), false)
 })
 
 test('does not call Studio management API until Studio auth is available', async () => {
