@@ -170,8 +170,14 @@ EOF
 
     if [ "$first" -eq 0 ]; then printf ',\n' >>"$catalog_tmp"; fi
     first=0
-    printf '  {"package_id":"%s","resource_id":"%s","endpoint":"%s","proxy_path":"%s"}' \
-        "$package_id" "$resource_id" "$endpoint" "$proxy_path" >>"$catalog_tmp"
+    if [ "$package_id" = "cloud.lazycat.app.lazycat-agent-browser-skill" ] && \
+       [ "$resource_id" = "lazycat-agent-browser" ] && [ "$endpoint" = "/mcp" ]; then
+        printf '  {"package_id":"%s","resource_id":"%s","endpoint":"%s","proxy_path":"%s","original_host_suffix":"manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp","original_port":8080}' \
+            "$package_id" "$resource_id" "$endpoint" "$proxy_path" >>"$catalog_tmp"
+    else
+        printf '  {"package_id":"%s","resource_id":"%s","endpoint":"%s","proxy_path":"%s"}' \
+            "$package_id" "$resource_id" "$endpoint" "$proxy_path" >>"$catalog_tmp"
+    fi
 done <"$files_tmp"
 
 printf '\n]\n' >>"$catalog_tmp"

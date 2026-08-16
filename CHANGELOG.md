@@ -4,16 +4,18 @@
 
 ### 行为边界
 - Hermes Studio 不再自动添加、更新、删除或恢复任何 MCP 条目，也不自动调用 MCP reload；所有 MCP 由用户手动配置和管理。
-- 用户可保留各个 LazyCat MCP 的原始多实例 URL，例如 `http://<user>.<service>.<package-id>.lzcapp:<port>/<endpoint>`；每个 MCP 仍是独立 Server，不聚合工具或会话。
-- Hermes WebUI 容器内新增仅监听 `127.0.0.1` 的 HTTP 出站代理。它只对实际投影目录中精确匹配的 `.lzcapp` MCP URL转换到对应 `app.<package-id>.lzcx<endpoint>`，并通过私有 UDS relay 自动附加当前用户内存 Ticket。
-- 未知 `.lzcapp` Provider 或错误 endpoint 失败关闭；普通 HTTP 原样转发且剥离 LazyCat 身份头；普通 HTTPS 使用无 Ticket CONNECT 隧道；`.lzcapp` HTTPS CONNECT 被拒绝。
+- 本测试包只透明接管已经从目标 LazyCat 实机 manifest 核验的浏览器 MCP 原始多实例 URL：`http://<user>.manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp:8080/mcp`。该 MCP 在 Studio 中仍是独立 Server，不聚合工具或会话。
+- Hermes WebUI 容器内新增仅监听 `127.0.0.1` 的 HTTP 出站代理。它必须同时精确匹配 Catalog 中的 service host suffix、port 和 endpoint，才转换到对应 `app.<package-id>.lzcx<endpoint>`，并通过私有 UDS relay自动附加当前用户内存 Ticket。
+- 未知 Provider、错误 service、port 或 endpoint 全部失败关闭；代理拒绝普通 HTTP 与所有 CONNECT，不具备通用转发或 SSRF 能力。其他 MCP 在没有可信 service/port 元数据前不进入透明接管 allowlist。
+- 两层 relay 均剥离调用方提供的全部 `X-HC-*` 身份头，仅由最内层 lease 注入当前内存 Ticket。
 - Ticket 继续仅存在当前多实例 sidecar 内存，页面仅执行捕获与五分钟续租；不写入配置、磁盘、Catalog、日志或响应。
 
 ### 已执行门禁
-- TDD RED→GREEN 覆盖原始多实例URL映射、未知Provider/错误endpoint拒绝、普通HTTP透传、HTTPS隧道和loopback绑定。
-- Node bootstrap测试4/4通过；Python包装层、安全、TOCTOU及透明代理测试24/24通过。
-- Node/Shell语法与 `git diff --check` 通过；未修改Hermes Studio运行镜像。
-- 安装后的真实原始URL MCP initialize/tools/list仍需在用户安装本测试包后验证。
+- TDD RED→GREEN 覆盖原始多实例URL映射、未知Provider、错误service/port/endpoint拒绝、普通HTTP与CONNECT拒绝、双层 `X-HC-*` 剥离和loopback绑定。
+- Node bootstrap测试4/4通过；Python包装层、安全、TOCTOU及透明代理测试29/29通过。
+- Preview Nginx、runtime lease、静态安全契约、Node/Shell语法与 `git diff --check` 通过；未修改Hermes Studio运行镜像。
+- `lzc-cli project lint` 退出0，保留6条既有策略警告。
+- 安装后的真实浏览器原始URL MCP initialize/tools/list仍需在用户安装本测试包后验证。
 
 ---
 

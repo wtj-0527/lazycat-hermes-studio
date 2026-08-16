@@ -80,8 +80,11 @@ function proxy(req, res) {
   if (!['GET', 'POST', 'DELETE'].includes(req.method || '')) return send(res, 405)
   if (!target || !catalogAllows(target)) return send(res, 400, 'Invalid managed LazyCat MCP target.')
 
-  const headers = stripHopByHop({ ...req.headers, host: target.host, 'x-hc-user-ticket': ticket })
-  for (const name of ['x-lazycat-target', 'content-length']) delete headers[name]
+  const headers = stripHopByHop({ ...req.headers, host: target.host })
+  for (const name of Object.keys(headers)) {
+    if (name === 'x-lazycat-target' || name === 'content-length' || name.startsWith('x-hc-')) delete headers[name]
+  }
+  headers['x-hc-user-ticket'] = ticket
   const upstream = http.request(target, { method: req.method, headers }, upstreamRes => {
     if (upstreamRes.statusCode === 401 || upstreamRes.statusCode === 403) lease = null
     const responseHeaders = stripHopByHop({ ...upstreamRes.headers, 'cache-control': 'no-store' })

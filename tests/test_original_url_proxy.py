@@ -53,12 +53,14 @@ def free_port():
         return sock.getsockname()[1]
 
 
-def proxy_request(port, method, absolute_url, body=b""):
+def proxy_request(port, method, absolute_url, body=b"", headers=None):
     conn = http.client.HTTPConnection("127.0.0.1", port, timeout=3)
     conn.putrequest(method, absolute_url, skip_host=True)
     conn.putheader("Host", absolute_url.split("//", 1)[1].split("/", 1)[0])
     conn.putheader("Content-Type", "application/json")
     conn.putheader("Content-Length", str(len(body)))
+    for key, value in (headers or {}).items():
+        conn.putheader(key, value)
     conn.endheaders(body)
     response = conn.getresponse()
     payload = response.read()
@@ -94,6 +96,8 @@ class OriginalUrlProxyTest(unittest.TestCase):
             "package_id": PACKAGE,
             "resource_id": "lazycat-agent-browser",
             "endpoint": "/mcp",
+            "original_host_suffix": f"manager.{PACKAGE}.lzcapp",
+            "original_port": 8080,
             "proxy_path": f"/lazycat-mcp/{PACKAGE}/lazycat-agent-browser",
         }]))
         UnixHTTPHandler.seen = []
@@ -154,7 +158,21 @@ class OriginalUrlProxyTest(unittest.TestCase):
         request_line, seen_headers, seen_body = UnixHTTPHandler.seen[-1]
         self.assertEqual(request_line, "POST /internal/proxy HTTP/1.1")
         self.assertEqual(seen_headers["x-lazycat-target"], TARGET)
+        self.assertNotIn("x-hc-user-id", seen_headers)
+        self.assertNotIn("x-hc-source", seen_headers)
         self.assertEqual(seen_body, b'{"jsonrpc":"2.0"}')
+
+    def test_strips_caller_supplied_lazycat_identity_headers(self):
+        status, _, _ = proxy_request(
+            self.port,
+            "POST",
+            ORIGINAL,
+            b"{}",
+            {"X-HC-User-ID": "forged", "X-HC-Source": "client", "X-HC-Role": "owner"},
+        )
+        self.assertEqual(status, 200)
+        _, headers, _ = UnixHTTPHandler.seen[-1]
+        self.assertFalse(any(name.startswith("x-hc-") for name in headers))
 
     def test_rejects_unknown_lazycat_package(self):
         status, _, _ = proxy_request(
@@ -168,34 +186,38 @@ class OriginalUrlProxyTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(UnixHTTPHandler.seen, [])
 
-    def test_forwards_unrelated_http_without_ticket_relay(self):
+    def test_rejects_wrong_service_or_port_for_known_provider(self):
+        for url in (
+            f"http://wtj.worker.{PACKAGE}.lzcapp:8080/mcp",
+            f"http://wtj.manager.{PACKAGE}.lzcapp:9999/mcp",
+        ):
+            with self.subTest(url=url):
+                UnixHTTPHandler.seen = []
+                status, _, _ = proxy_request(self.port, "POST", url)
+                self.assertEqual(status, 400)
+                self.assertEqual(UnixHTTPHandler.seen, [])
+
+    def test_rejects_unrelated_http(self):
         UnixHTTPHandler.seen = []
         url = f"http://127.0.0.1:{self.upstream.server_address[1]}/ordinary"
         status, _, _ = proxy_request(self.port, "POST", url, b"plain")
-        self.assertEqual(status, 200)
-        request_line, headers, body = UnixHTTPHandler.seen[-1]
-        self.assertEqual(request_line, "POST /ordinary HTTP/1.1")
-        self.assertNotIn("x-lazycat-target", headers)
-        self.assertNotIn("x-hc-user-ticket", headers)
-        self.assertEqual(body, b"plain")
+        self.assertEqual(status, 403)
+        self.assertEqual(UnixHTTPHandler.seen, [])
 
-    def test_forwards_unrelated_http_methods_without_ticket_relay(self):
+    def test_rejects_unrelated_http_methods(self):
         for method in ("HEAD", "PUT", "PATCH", "OPTIONS"):
             with self.subTest(method=method):
                 UnixHTTPHandler.seen = []
                 url = f"http://127.0.0.1:{self.upstream.server_address[1]}/ordinary"
                 status, _, _ = proxy_request(self.port, method, url, b"plain")
-                self.assertEqual(status, 200)
-                request_line, headers, _ = UnixHTTPHandler.seen[-1]
-                self.assertEqual(request_line, f"{method} /ordinary HTTP/1.1")
-                self.assertNotIn("x-lazycat-target", headers)
-                self.assertNotIn("x-hc-user-ticket", headers)
+                self.assertEqual(status, 403)
+                self.assertEqual(UnixHTTPHandler.seen, [])
 
-    def test_tunnels_unrelated_https_without_ticket_injection(self):
+    def test_rejects_connect_tunnelling(self):
         authority = f"127.0.0.1:{self.echo.server_address[1]}"
         status_line, echoed = connect_tunnel(self.port, authority)
-        self.assertEqual(status_line, b"HTTP/1.1 200 Connection Established")
-        self.assertEqual(echoed, b"ping")
+        self.assertEqual(status_line, b"HTTP/1.1 405 Method Not Allowed")
+        self.assertEqual(echoed, b"")
 
 
 if __name__ == "__main__":

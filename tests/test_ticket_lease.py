@@ -160,6 +160,23 @@ class TicketLeaseTest(unittest.TestCase):
         })
         self.assertEqual(status, 400)
 
+    def test_proxy_strips_forged_lazycat_identity_headers(self):
+        self.capture()
+        status, _, _ = request(self.port, "POST", "/internal/proxy", {
+            "X-LazyCat-Target": self.target,
+            "X-HC-USER-TICKET": "forged-ticket",
+            "X-HC-User-ID": "forged-user",
+            "X-HC-SOURCE": "client",
+            "X-HC-Role": "owner",
+            "Content-Type": "application/json",
+        }, b"{}")
+        self.assertEqual(status, 200)
+        seen_headers = {key.lower(): value for key, value in UpstreamHandler.seen[-1][1].items()}
+        self.assertEqual(seen_headers["x-hc-user-ticket"], "secret-ticket-A")
+        self.assertNotIn("x-hc-user-id", seen_headers)
+        self.assertNotIn("x-hc-source", seen_headers)
+        self.assertNotIn("x-hc-role", seen_headers)
+
     def test_proxy_rejects_non_mcp_methods(self):
         self.capture()
         status, _, _ = request(self.port, "HEAD", "/internal/proxy", {

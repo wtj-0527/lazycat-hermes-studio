@@ -64,6 +64,26 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
             ],
         )
 
+    def test_generates_browser_original_route_only_with_verified_identity(self):
+        result, _, catalog = self.run_generator([
+            (
+                "cloud.lazycat.app.lazycat-agent-browser-skill",
+                "lazycat-agent-browser",
+                "endpoint: /mcp\n",
+            ),
+            ("cloud.lazycat.app.todolist", "default", "endpoint: /api/mcp\n"),
+        ])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIsInstance(catalog, list)
+        assert isinstance(catalog, list)
+        browser, todolist = catalog
+        self.assertEqual(
+            (browser["original_host_suffix"], browser["original_port"]),
+            ("manager.cloud.lazycat.app.lazycat-agent-browser-skill.lzcapp", 8080),
+        )
+        self.assertNotIn("original_host_suffix", todolist)
+        self.assertNotIn("original_port", todolist)
+
     def test_skips_unsafe_or_malformed_resources(self):
         result, nginx, catalog = self.run_generator([
             ("cloud.lazycat.app.good", "default", "endpoint: /mcp\n"),

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import http from 'node:http'
-import net from 'node:net'
+
 import { readFileSync } from 'node:fs'
 import { pipeline } from 'node:stream'
 
@@ -42,8 +42,11 @@ function targetFor(rawUrl) {
   if (url.protocol !== 'http:' || url.username || url.password || url.hash) return null
   if (!url.hostname.endsWith('.lzcapp')) return null
   for (const provider of providers()) {
-    const suffix = `.${provider.package_id}.lzcapp`
+    if (typeof provider.original_host_suffix !== 'string' || !provider.original_host_suffix) continue
+    if (!Number.isInteger(provider.original_port) || provider.original_port < 1 || provider.original_port > 65535) continue
+    const suffix = `.${provider.original_host_suffix}`
     if (!url.hostname.endsWith(suffix) || url.hostname.length <= suffix.length) continue
+    if (Number(url.port || 80) !== provider.original_port) continue
     if (url.pathname + url.search !== provider.endpoint) continue
     return `http://app.${provider.package_id}.lzcx${provider.endpoint}`
   }
@@ -52,7 +55,9 @@ function targetFor(rawUrl) {
 
 function relay(req, res, target) {
   const headers = stripHopByHop({ ...req.headers, 'x-lazycat-target': target })
-  delete headers.host
+  for (const name of Object.keys(headers)) {
+    if (name === 'host' || name.startsWith('x-hc-')) delete headers[name]
+  }
   const upstream = http.request({
     socketPath,
     path: '/internal/proxy',
@@ -72,20 +77,6 @@ function relay(req, res, target) {
   pipeline(req, upstream, () => {})
 }
 
-function forward(req, res, url) {
-  if (!['http:'].includes(url.protocol) || url.username || url.password || url.hash) return send(res, 400)
-  const headers = stripHopByHop({ ...req.headers, host: url.host })
-  for (const name of ['x-lazycat-target', 'x-hc-user-ticket', 'x-hc-user-id', 'x-hc-source']) delete headers[name]
-  const upstream = http.request(url, { method: req.method, headers }, upstreamRes => {
-    const responseHeaders = stripHopByHop({ ...upstreamRes.headers })
-    res.writeHead(upstreamRes.statusCode || 502, responseHeaders)
-    pipeline(upstreamRes, res, () => {})
-  })
-  upstream.setTimeout(300000, () => upstream.destroy(new Error('upstream timeout')))
-  upstream.on('error', () => { if (!res.headersSent) send(res, 502, 'HTTP upstream unavailable.') })
-  pipeline(req, upstream, () => {})
-}
-
 const server = http.createServer((req, res) => {
   let url
   try { url = new URL(req.url || '') } catch { return send(res, 400) }
@@ -95,28 +86,10 @@ const server = http.createServer((req, res) => {
     return relay(req, res, target)
   }
   if (url.hostname.endsWith('.lzcapp')) return send(res, 400, 'Unknown or invalid projected LazyCat MCP URL.')
-  forward(req, res, url)
+  return send(res, 403, 'This proxy only accepts exact projected LazyCat MCP URLs.')
 })
-server.on('connect', (req, client, head) => {
-  const authority = req.url || ''
-  let target
-  try { target = new URL(`http://${authority}`) } catch {
-    client.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n')
-    return
-  }
-  if (!target.hostname || target.hostname.endsWith('.lzcapp') || !target.port) {
-    client.end('HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n\r\n')
-    return
-  }
-  const upstream = net.connect(Number(target.port), target.hostname)
-  upstream.setTimeout(300000, () => upstream.destroy())
-  upstream.once('connect', () => {
-    client.write('HTTP/1.1 200 Connection Established\r\n\r\n')
-    if (head.length) upstream.write(head)
-    client.pipe(upstream)
-    upstream.pipe(client)
-  })
-  upstream.once('error', () => client.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n'))
+server.on('connect', (_req, client) => {
+  client.end('HTTP/1.1 405 Method Not Allowed\r\nConnection: close\r\n\r\n')
 })
 server.listen(listenPort, '127.0.0.1', () => {
   console.log('[lazycat-original-url-proxy] listening on loopback')
