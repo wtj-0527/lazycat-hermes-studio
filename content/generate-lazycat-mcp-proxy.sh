@@ -10,7 +10,8 @@ mkdir -p "$(dirname "$NGINX_OUTPUT")" "$(dirname "$CATALOG_OUTPUT")"
 nginx_tmp="${NGINX_OUTPUT}.tmp.$$"
 catalog_tmp="${CATALOG_OUTPUT}.tmp.$$"
 files_tmp="${TMPDIR:-/tmp}/lazycat-mcp-files.$$"
-trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$files_tmp"' 0 HUP INT TERM
+snapshot_tmp="${TMPDIR:-/tmp}/lazycat-mcp-snapshot.$$"
+trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$files_tmp" "$snapshot_tmp"' 0 HUP INT TERM
 
 cat >"$nginx_tmp" <<EOF
 # generated LazyCat MCP routes; do not edit
@@ -66,6 +67,7 @@ read_endpoint() {
 }
 
 if [ -d "$RESOURCE_ROOT" ]; then
+    resource_root_real=$(readlink -f "$RESOURCE_ROOT")
     : >"$files_tmp"
     for package_dir in "$RESOURCE_ROOT"/*; do
         [ -d "$package_dir" ] || continue
@@ -75,7 +77,9 @@ if [ -d "$RESOURCE_ROOT" ]; then
             [ ! -L "$resource_dir" ] || continue
             [ -f "$resource_dir/mcp.yml" ] || continue
             [ ! -L "$resource_dir/mcp.yml" ] || continue
-            printf '%s\n' "$resource_dir/mcp.yml" >>"$files_tmp"
+            file_identity=$(stat -Lc '%d:%i' "$resource_dir/mcp.yml" 2>/dev/null || true)
+            [ -n "$file_identity" ] || continue
+            printf '%s\t%s\n' "$resource_dir/mcp.yml" "$file_identity" >>"$files_tmp"
         done
     done
     LC_ALL=C sort -o "$files_tmp" "$files_tmp"
@@ -83,7 +87,8 @@ else
     : >"$files_tmp"
 fi
 
-while IFS= read -r file; do
+tab=$(printf '\t')
+while IFS="$tab" read -r file expected_identity; do
     relative=${file#"$RESOURCE_ROOT"/}
     package_id=${relative%%/*}
     rest=${relative#*/}
@@ -96,10 +101,38 @@ while IFS= read -r file; do
         ''|*[!A-Za-z0-9._-]*) echo "[mcp-proxy] skip unsafe resource id: $resource_id" >&2; continue ;;
     esac
 
-    if ! endpoint=$(read_endpoint "$file"); then
+    # Pin the resource to an open descriptor before validating its origin.
+    # Replacing the pathname afterwards cannot redirect reads from this FD.
+    if ! exec 3<"$file"; then
+        echo "[mcp-proxy] skip $package_id/$resource_id: cannot open mcp.yml" >&2
+        continue
+    fi
+    opened_identity=$(stat -Lc '%d:%i' "/proc/$$/fd/3" 2>/dev/null || true)
+    if [ -z "$opened_identity" ] || [ "$opened_identity" != "$expected_identity" ]; then
+        exec 3<&-
+        echo "[mcp-proxy] skip $package_id/$resource_id: resource changed after discovery" >&2
+        continue
+    fi
+    expected_file="$resource_root_real/$package_id/$resource_id/mcp.yml"
+    opened_file=$(readlink -f "/proc/$$/fd/3" 2>/dev/null || true)
+    if [ "$opened_file" != "$expected_file" ]; then
+        exec 3<&-
+        echo "[mcp-proxy] skip $package_id/$resource_id: resource escaped projection root" >&2
+        continue
+    fi
+    if ! cat <&3 >"$snapshot_tmp"; then
+        exec 3<&-
+        echo "[mcp-proxy] skip $package_id/$resource_id: cannot snapshot mcp.yml" >&2
+        continue
+    fi
+    exec 3<&-
+
+    if ! endpoint=$(read_endpoint "$snapshot_tmp"); then
+        rm -f "$snapshot_tmp"
         echo "[mcp-proxy] skip $package_id/$resource_id: malformed or unsupported mcp.yml" >&2
         continue
     fi
+    rm -f "$snapshot_tmp"
 
     case "$endpoint" in
         /*) ;;
