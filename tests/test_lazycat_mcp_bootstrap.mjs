@@ -66,6 +66,22 @@ test('does not call Studio management API until Studio auth is available', async
   assert.equal(h.calls.some(call => call.url.startsWith('/api/hermes/mcp/')), false)
 })
 
+test('recognizes managed package IDs containing underscores', async () => {
+  const underscored = {
+    package_id: 'cloud.lazycat.app.foo_bar',
+    resource_id: 'default',
+    proxy_path: '/lazycat-mcp/cloud.lazycat.app.foo_bar/default',
+  }
+  const name = managedName(underscored)
+  const h = harness([], [{
+    name,
+    raw_config: { url: 'http://nginx/lazycat-mcp/cloud.lazycat.app.foo_bar/default' },
+  }])
+  await h.run()
+  assert.equal(h.calls.some(call => call.method === 'DELETE' && call.url.endsWith(encodeURIComponent(name))), true)
+  assert.equal(h.calls.at(-1).url, '/api/hermes/mcp/reload')
+})
+
 test('does not overwrite an unmarked colliding user server', async () => {
   const name = managedName(provider)
   const h = harness([provider], [{ name, raw_config: { url: 'http://user.example/mcp' } }])

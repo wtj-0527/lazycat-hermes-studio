@@ -10,7 +10,7 @@ function isOwnedConfig(name, config) {
   if (split <= 0) return false
   const packageId = suffix.slice(0, split)
   const resourceId = suffix.slice(split + 2)
-  if (!/^[A-Za-z0-9.-]+$/.test(packageId) || !/^[A-Za-z0-9._-]+$/.test(resourceId)) return false
+  if (!/^[A-Za-z0-9._-]+$/.test(packageId) || !/^[A-Za-z0-9._-]+$/.test(resourceId)) return false
   return config.url === `http://nginx/lazycat-mcp/${packageId}/${resourceId}`
 }
 
