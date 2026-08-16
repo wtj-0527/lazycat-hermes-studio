@@ -14,7 +14,11 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh", manifest)
         self.assertIn("SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock", manifest)
         self.assertIn("CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json", manifest)
+        self.assertIn("SOCKET_GID=101", manifest)
         self.assertNotIn("TEST_ALLOW_LOOPBACK", manifest)
+        lease = (ROOT / "content" / "lazycat-ticket-lease.mjs").read_text()
+        self.assertIn("0o660", lease)
+        self.assertNotIn("0o666", lease)
         self.assertNotIn("build:", manifest)
 
     def test_nginx_captures_ticket_and_bootstraps_without_exposing_it(self):

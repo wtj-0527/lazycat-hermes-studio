@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import http from 'node:http'
-import { chmodSync, readFileSync, rmSync } from 'node:fs'
+import { chmodSync, chownSync, readFileSync, rmSync } from 'node:fs'
 import { pipeline } from 'node:stream'
 
 const port = Number(process.env.PORT || 8787)
 const ttlMs = Number(process.env.LEASE_TTL_MS || 15 * 60 * 1000)
 const socketPath = process.env.SOCKET_PATH || ''
+const socketGid = Number(process.env.SOCKET_GID || 101)
 const testLoopback = process.env.TEST_ALLOW_LOOPBACK === '1'
 const catalogFile = process.env.CATALOG_FILE || ''
 let lease = null
@@ -105,7 +106,8 @@ const server = http.createServer((req, res) => {
 if (socketPath) {
   rmSync(socketPath, { force: true })
   server.listen(socketPath, () => {
-    chmodSync(socketPath, 0o666)
+    chownSync(socketPath, 0, socketGid)
+    chmodSync(socketPath, 0o660)
     console.log('[lazycat-ticket-lease] listening on private socket')
   })
 } else {

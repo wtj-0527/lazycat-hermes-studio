@@ -1,4 +1,4 @@
-# 2026.08.16.1225（测试包）
+# 2026.08.16.1231（测试包）
 
 ## LazyCat MCP 自动发现与短期票据租约
 
@@ -10,7 +10,7 @@
 ### 测试目标
 - 用户正常打开 Hermes Studio 后，由 LazyCat ingress 在同源 capture 请求上提供 `X-HC-USER-TICKET`；包装层仅在当前多实例容器组内存中保存 15 分钟短期租约。
 - 自动读取导入的 `mcp-providers` 投影，为 Hermes Profile 添加无凭据、使用保留名称与固定内部 URL 的 MCP 条目；仅对名称和 URL 均严格匹配的条目执行更新或孤儿清理，不覆盖用户配置。
-- Nginx 与租约 sidecar 仅通过当前实例私有 Unix socket 通信；后台 MCP 请求只允许生成 Catalog 中的精确 `.lzcx` 目标；无租约、租约过期、用户不一致或上游认证失败时失败关闭。
+- Nginx 与租约 sidecar 仅通过当前实例私有 Unix socket 通信；socket 使用目标 Nginx worker 组 `root:101` 与 `0660` 权限，运行目录为 `0750`；后台 MCP 请求只允许生成 Catalog 中的精确 `.lzcx` 目标；无租约、租约过期、用户不一致或上游认证失败时失败关闭。
 - 用户票据不写入配置、磁盘、数据库、Catalog、Nginx生成文件、日志或响应。
 
 ### 已执行门禁
