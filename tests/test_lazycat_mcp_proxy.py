@@ -69,6 +69,11 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
             ("cloud.lazycat.app.good", "default", "endpoint: /mcp\n"),
             ("cloud.lazycat.app.bad", "default", "endpoint: http://attacker.invalid/mcp\n"),
             ("cloud.lazycat.app.traversal", "default", "endpoint: /api/../admin\n"),
+            ("cloud.lazycat.app.encoded-dot", "default", "endpoint: /api/%2e%2e/admin\n"),
+            ("cloud.lazycat.app.encoded-slash", "default", "endpoint: /api%2Fadmin\n"),
+            ("cloud.lazycat.app.encoded-backslash", "default", "endpoint: /api%5cadmin\n"),
+            ("cloud.lazycat.app.encoded-mixed", "default", "endpoint: /api/%2E%2e/admin\n"),
+            ("cloud.lazycat.app.double-encoded", "default", "endpoint: /api/%252e%252e/admin\n"),
             ("cloud.lazycat.app.variable", "default", "endpoint: /mcp?$arg_target\n"),
             ("cloud.lazycat.app.nospace", "default", "endpoint:/should-not-be-a-mapping\n"),
             ("cloud.lazycat.app.tab", "default", "endpoint: /mcp\tbad\n"),
@@ -84,6 +89,11 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
         self.assertIn("cloud.lazycat.app.good", nginx)
         self.assertNotIn("attacker.invalid", nginx)
         self.assertNotIn("cloud.lazycat.app.traversal", nginx)
+        self.assertNotIn("cloud.lazycat.app.encoded-dot", nginx)
+        self.assertNotIn("cloud.lazycat.app.encoded-slash", nginx)
+        self.assertNotIn("cloud.lazycat.app.encoded-backslash", nginx)
+        self.assertNotIn("cloud.lazycat.app.encoded-mixed", nginx)
+        self.assertNotIn("cloud.lazycat.app.double-encoded", nginx)
         self.assertNotIn("cloud.lazycat.app.variable", nginx)
         self.assertNotIn("cloud.lazycat.app.nospace", nginx)
         self.assertNotIn("cloud.lazycat.app.tab", nginx)

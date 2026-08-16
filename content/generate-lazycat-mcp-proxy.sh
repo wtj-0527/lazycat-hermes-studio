@@ -103,7 +103,7 @@ while IFS= read -r file; do
         *) echo "[mcp-proxy] skip $package_id/$resource_id: endpoint must be absolute" >&2; continue ;;
     esac
     case "$endpoint" in
-        *..*|*://*|*[!A-Za-z0-9._~/?\&=+,:%-]*)
+        *..*|*://*|*%*|*[!A-Za-z0-9._~/?\&=+,:-]*)
             echo "[mcp-proxy] skip $package_id/$resource_id: unsafe endpoint" >&2
             continue
             ;;
