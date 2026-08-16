@@ -39,13 +39,19 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("proxy_set_header X-LazyCat-Target http://app.$package_id.lzcx$endpoint", generator)
         self.assertNotRegex(generator, r"proxy_pass http://app\.\$package_id\.lzcx\$endpoint")
 
-    def test_bootstrap_manages_only_marked_entries(self):
+    def test_wrapper_startup_injects_projected_servers_before_webui(self):
+        manifest = (ROOT / "lzc-manifest.yml").read_text()
+        self.assertIn("MCP_NGINX_OUTPUT=/tmp/lazycat-mcp-generated.conf", manifest)
+        self.assertIn("MCP_CATALOG_OUTPUT=/tmp/lazycat-mcp-providers.json", manifest)
+        self.assertIn("sh /lzcapp/pkg/content/generate-lazycat-mcp-proxy.sh", manifest)
+        self.assertIn("/opt/hermes/.venv/bin/python /lzcapp/pkg/content/inject-lazycat-mcp-config.py", manifest)
+
+    def test_bootstrap_only_captures_and_renews_ticket(self):
         script = (ROOT / "content" / "lazycat-mcp-bootstrap.js").read_text()
-        self.assertNotIn("_lazycat_managed", script)
-        self.assertIn("isOwnedConfig", script)
-        self.assertIn("/api/hermes/mcp/servers", script)
-        self.assertIn("/lazycat-mcp/providers.json", script)
         self.assertIn("/lazycat-mcp/capture", script)
+        self.assertIn("setInterval", script)
+        self.assertNotIn("/api/hermes/mcp/servers", script)
+        self.assertNotIn("/api/hermes/mcp/reload", script)
         self.assertNotIn("X-HC-USER-TICKET", script)
         self.assertNotIn("document.cookie", script)
 

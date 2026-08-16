@@ -162,5 +162,11 @@ services:
         echo '[setup] SSH config linked to /home/agent'
       fi
 
-
+      # --- Reconcile ticket-free LazyCat MCP routes before Studio starts ---
+      MCP_RESOURCE_ROOT=/lzcapp/run/resources/mcp-providers \
+      MCP_NGINX_OUTPUT=/tmp/lazycat-mcp-generated.conf \
+      MCP_CATALOG_OUTPUT=/tmp/lazycat-mcp-providers.json \
+        sh /lzcapp/pkg/content/generate-lazycat-mcp-proxy.sh
+      MCP_CATALOG_FILE=/tmp/lazycat-mcp-providers.json \
+        /opt/hermes/.venv/bin/python /lzcapp/pkg/content/inject-lazycat-mcp-config.py
 
