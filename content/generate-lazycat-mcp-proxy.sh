@@ -69,9 +69,12 @@ if [ -d "$RESOURCE_ROOT" ]; then
     : >"$files_tmp"
     for package_dir in "$RESOURCE_ROOT"/*; do
         [ -d "$package_dir" ] || continue
+        [ ! -L "$package_dir" ] || continue
         for resource_dir in "$package_dir"/*; do
             [ -d "$resource_dir" ] || continue
+            [ ! -L "$resource_dir" ] || continue
             [ -f "$resource_dir/mcp.yml" ] || continue
+            [ ! -L "$resource_dir/mcp.yml" ] || continue
             printf '%s\n' "$resource_dir/mcp.yml" >>"$files_tmp"
         done
     done

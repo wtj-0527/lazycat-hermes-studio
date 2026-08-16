@@ -114,6 +114,54 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
         self.assertIn("generated LazyCat MCP routes", nginx)
         self.assertEqual(catalog, [])
 
+    def test_rejects_symlinks_that_escape_or_alias_the_resource_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            root = tmp_path / "resources" / "mcp-providers"
+            output = tmp_path / "generated.conf"
+            catalog_path = tmp_path / "providers.json"
+            outside = tmp_path / "outside"
+            outside.mkdir()
+            (outside / "mcp.yml").write_text("endpoint: /outside\n", encoding="utf-8")
+
+            package = root / "cloud.lazycat.app.symlink"
+            package.mkdir(parents=True)
+            (package / "resource-dir").symlink_to(outside, target_is_directory=True)
+
+            file_resource = package / "file"
+            file_resource.mkdir()
+            (file_resource / "mcp.yml").symlink_to(outside / "mcp.yml")
+
+            real_resource = package / "real"
+            real_resource.mkdir()
+            (real_resource / "mcp.yml").write_text("endpoint: /real\n", encoding="utf-8")
+            (root / "cloud.lazycat.app.package-link").symlink_to(package, target_is_directory=True)
+
+            result = subprocess.run(
+                ["sh", str(GENERATOR)],
+                cwd=REPO,
+                env={
+                    **os.environ,
+                    "MCP_RESOURCE_ROOT": str(root),
+                    "MCP_NGINX_OUTPUT": str(output),
+                    "MCP_CATALOG_OUTPUT": str(catalog_path),
+                },
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            nginx = output.read_text(encoding="utf-8")
+            catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+            self.assertNotIn("/resource-dir", nginx)
+            self.assertNotIn("/file", nginx)
+            self.assertNotIn("cloud.lazycat.app.package-link", nginx)
+            self.assertIn("/lazycat-mcp/cloud.lazycat.app.symlink/real", nginx)
+            self.assertEqual(
+                [(item["package_id"], item["resource_id"]) for item in catalog],
+                [("cloud.lazycat.app.symlink", "real")],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
