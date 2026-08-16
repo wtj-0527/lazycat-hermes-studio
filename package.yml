@@ -18,3 +18,7 @@ permissions:
     - net.internet
     - lzcapp.user_delegate
     - document.private
+import_resources:
+  - kind: skills
+  - kind: mcp-providers
+
