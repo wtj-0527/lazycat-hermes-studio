@@ -87,11 +87,13 @@ function forward(req, res, url) {
 }
 
 const server = http.createServer((req, res) => {
-  if (!['GET', 'POST', 'DELETE'].includes(req.method || '')) return send(res, 405)
   let url
   try { url = new URL(req.url || '') } catch { return send(res, 400) }
   const target = targetFor(url.href)
-  if (target) return relay(req, res, target)
+  if (target) {
+    if (!['GET', 'POST', 'DELETE'].includes(req.method || '')) return send(res, 405)
+    return relay(req, res, target)
+  }
   if (url.hostname.endsWith('.lzcapp')) return send(res, 400, 'Unknown or invalid projected LazyCat MCP URL.')
   forward(req, res, url)
 })

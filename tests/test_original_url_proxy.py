@@ -179,6 +179,18 @@ class OriginalUrlProxyTest(unittest.TestCase):
         self.assertNotIn("x-hc-user-ticket", headers)
         self.assertEqual(body, b"plain")
 
+    def test_forwards_unrelated_http_methods_without_ticket_relay(self):
+        for method in ("HEAD", "PUT", "PATCH", "OPTIONS"):
+            with self.subTest(method=method):
+                UnixHTTPHandler.seen = []
+                url = f"http://127.0.0.1:{self.upstream.server_address[1]}/ordinary"
+                status, _, _ = proxy_request(self.port, method, url, b"plain")
+                self.assertEqual(status, 200)
+                request_line, headers, _ = UnixHTTPHandler.seen[-1]
+                self.assertEqual(request_line, f"{method} /ordinary HTTP/1.1")
+                self.assertNotIn("x-lazycat-target", headers)
+                self.assertNotIn("x-hc-user-ticket", headers)
+
     def test_tunnels_unrelated_https_without_ticket_injection(self):
         authority = f"127.0.0.1:{self.echo.server_address[1]}"
         status_line, echoed = connect_tunnel(self.port, authority)
