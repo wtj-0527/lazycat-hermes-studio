@@ -61,7 +61,6 @@ class TicketLeaseTest(unittest.TestCase):
         env.update({
             "PORT": str(self.port),
             "LEASE_TTL_MS": "250",
-            "INTERNAL_TOKEN": self.token,
             "ALLOWED_HOST_SUFFIX": ".lzcx",
             "TEST_ALLOW_LOOPBACK": "1",
         })
@@ -100,7 +99,6 @@ class TicketLeaseTest(unittest.TestCase):
 
     def capture(self, ticket="secret-ticket-A", user="user-a"):
         return request(self.port, "POST", "/internal/capture", {
-            "X-Internal-Token": self.token,
             "X-HC-USER-TICKET": ticket,
             "X-HC-User-ID": user,
             "X-HC-SOURCE": "client",
@@ -108,7 +106,6 @@ class TicketLeaseTest(unittest.TestCase):
 
     def proxy(self):
         return request(self.port, "POST", "/internal/proxy", {
-            "X-Internal-Token": self.token,
             "X-LazyCat-Target": self.target,
             "Content-Type": "application/json",
         }, b'{"jsonrpc":"2.0"}')
@@ -138,13 +135,12 @@ class TicketLeaseTest(unittest.TestCase):
         UpstreamHandler.status = 200
         self.assertEqual(self.proxy()[0], 428)
 
-    def test_capture_requires_internal_token_and_trusted_source(self):
+    def test_capture_requires_trusted_source_and_identity(self):
         status, _, _ = request(self.port, "POST", "/internal/capture", {
             "X-HC-USER-TICKET": "secret-ticket-A", "X-HC-SOURCE": "client"
         })
         self.assertEqual(status, 403)
         status, _, _ = request(self.port, "POST", "/internal/capture", {
-            "X-Internal-Token": self.token,
             "X-HC-USER-TICKET": "secret-ticket-A",
             "X-HC-SOURCE": "app:evil",
         })
@@ -160,10 +156,16 @@ class TicketLeaseTest(unittest.TestCase):
     def test_proxy_rejects_arbitrary_targets(self):
         self.capture()
         status, _, _ = request(self.port, "POST", "/internal/proxy", {
-            "X-Internal-Token": self.token,
             "X-LazyCat-Target": "http://example.com/mcp",
         })
         self.assertEqual(status, 400)
+
+    def test_proxy_rejects_non_mcp_methods(self):
+        self.capture()
+        status, _, _ = request(self.port, "HEAD", "/internal/proxy", {
+            "X-LazyCat-Target": self.target,
+        })
+        self.assertEqual(status, 405)
 
 
 if __name__ == "__main__":

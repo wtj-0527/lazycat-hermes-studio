@@ -6,22 +6,14 @@ NGINX_CONF="/etc/nginx/nginx.conf"
 SOURCE_CONF="/lzcapp/pkg/content/nginx.conf"
 MCP_PROXY_GENERATOR="/lzcapp/pkg/content/generate-lazycat-mcp-proxy.sh"
 MCP_RUNTIME_DIR="/lzcapp/var/mcp-runtime"
-MCP_TOKEN_FILE="$MCP_RUNTIME_DIR/internal-token"
 
-# 确保目录存在并创建实例内 MCP 内部认证随机值。
-umask 077
+# Unix socket 与无凭据 provider catalog 只在 Nginx 和租约 sidecar 间共享。
 mkdir -p /etc/nginx "$MCP_RUNTIME_DIR"
-if [ ! -s "$MCP_TOKEN_FILE" ]; then
-    od -An -N32 -tx1 /dev/urandom | tr -d " \n" >"$MCP_TOKEN_FILE.tmp"
-    mv "$MCP_TOKEN_FILE.tmp" "$MCP_TOKEN_FILE"
-fi
-MCP_INTERNAL_TOKEN=$(cat "$MCP_TOKEN_FILE")
-export MCP_INTERNAL_TOKEN
 export MCP_CATALOG_OUTPUT="$MCP_RUNTIME_DIR/providers.json"
 
 # 复制配置
 if [ -f "$SOURCE_CONF" ]; then
-    sed "s|__MCP_INTERNAL_TOKEN__|$MCP_INTERNAL_TOKEN|g" "$SOURCE_CONF" >"$NGINX_CONF"
+    cp "$SOURCE_CONF" "$NGINX_CONF"
     echo "[setup] nginx.conf copied to $NGINX_CONF"
 else
     echo "[setup] WARNING: $SOURCE_CONF not found"

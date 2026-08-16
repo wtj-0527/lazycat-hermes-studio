@@ -1,20 +1,14 @@
 #!/usr/bin/env node
 import http from 'node:http'
-import { readFileSync } from 'node:fs'
+import { chmodSync, readFileSync, rmSync } from 'node:fs'
 import { pipeline } from 'node:stream'
 
 const port = Number(process.env.PORT || 8787)
 const ttlMs = Number(process.env.LEASE_TTL_MS || 15 * 60 * 1000)
-const internalToken = process.env.INTERNAL_TOKEN_FILE
-  ? readFileSync(process.env.INTERNAL_TOKEN_FILE, 'utf8').trim()
-  : (process.env.INTERNAL_TOKEN || '')
+const socketPath = process.env.SOCKET_PATH || ''
 const testLoopback = process.env.TEST_ALLOW_LOOPBACK === '1'
 const catalogFile = process.env.CATALOG_FILE || ''
 let lease = null
-
-function authorized(req) {
-  return !internalToken || req.headers['x-internal-token'] === internalToken
-}
 
 function send(res, status, body = '') {
   res.writeHead(status, {
@@ -47,6 +41,16 @@ function catalogAllows(url) {
   }
 }
 
+function stripHopByHop(input) {
+  const headers = { ...input }
+  const connectionTokens = String(headers.connection || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean)
+  for (const name of [
+    'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
+    'te', 'trailer', 'transfer-encoding', 'upgrade', ...connectionTokens,
+  ]) delete headers[name]
+  return headers
+}
+
 function currentTicket() {
   if (!lease || Date.now() >= lease.expiresAt) {
     lease = null
@@ -56,7 +60,6 @@ function currentTicket() {
 }
 
 function capture(req, res) {
-  if (!authorized(req)) return send(res, 403)
   const source = req.headers['x-hc-source']
   const ticket = req.headers['x-hc-user-ticket']
   const userId = req.headers['x-hc-user-id']
@@ -70,35 +73,41 @@ function capture(req, res) {
 }
 
 function proxy(req, res) {
-  if (!authorized(req)) return send(res, 403)
   const ticket = currentTicket()
   if (!ticket) return send(res, 428, 'Open Hermes Studio once to authorize LazyCat MCP access.')
   const target = validTarget(req.headers['x-lazycat-target'])
+  if (!['GET', 'POST', 'DELETE'].includes(req.method || '')) return send(res, 405)
   if (!target || !catalogAllows(target)) return send(res, 400, 'Invalid managed LazyCat MCP target.')
 
-  const headers = { ...req.headers, host: target.host, 'x-hc-user-ticket': ticket }
-  const connectionTokens = String(req.headers.connection || '').split(',').map(value => value.trim().toLowerCase()).filter(Boolean)
-  for (const name of [
-    'x-internal-token', 'x-lazycat-target', 'connection', 'content-length',
-    'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailer',
-    'transfer-encoding', 'upgrade', ...connectionTokens,
-  ]) delete headers[name]
+  const headers = stripHopByHop({ ...req.headers, host: target.host, 'x-hc-user-ticket': ticket })
+  for (const name of ['x-lazycat-target', 'content-length']) delete headers[name]
   const upstream = http.request(target, { method: req.method, headers }, upstreamRes => {
     if (upstreamRes.statusCode === 401 || upstreamRes.statusCode === 403) lease = null
-    const responseHeaders = { ...upstreamRes.headers, 'cache-control': 'no-store' }
-    delete responseHeaders['transfer-encoding']
+    const responseHeaders = stripHopByHop({ ...upstreamRes.headers, 'cache-control': 'no-store' })
+    delete responseHeaders['content-length']
     res.writeHead(upstreamRes.statusCode || 502, responseHeaders)
     pipeline(upstreamRes, res, () => {})
   })
-  upstream.on('error', () => send(res, 502, 'Managed LazyCat MCP upstream unavailable.'))
+  upstream.setTimeout(300000, () => upstream.destroy(new Error('upstream timeout')))
+  const abort = () => { if (!res.writableEnded) upstream.destroy() }
+  req.once('aborted', abort)
+  res.once('close', abort)
+  upstream.on('error', () => { if (!res.headersSent) send(res, 502, 'Managed LazyCat MCP upstream unavailable.') })
   pipeline(req, upstream, () => {})
 }
 
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') return send(res, 200, 'ok')
   if (req.method === 'POST' && req.url === '/internal/capture') return capture(req, res)
   if (req.url === '/internal/proxy') return proxy(req, res)
   return send(res, 404)
-}).listen(port, '0.0.0.0', () => {
-  console.log('[lazycat-ticket-lease] listening')
 })
+if (socketPath) {
+  rmSync(socketPath, { force: true })
+  server.listen(socketPath, () => {
+    chmodSync(socketPath, 0o666)
+    console.log('[lazycat-ticket-lease] listening on private socket')
+  })
+} else {
+  server.listen(port, '0.0.0.0', () => console.log('[lazycat-ticket-lease] listening'))
+}

@@ -19,13 +19,12 @@ def run(*a,**kw): return subprocess.run(a,text=True,capture_output=True,check=Tr
 with tempfile.TemporaryDirectory() as td:
     td=Path(td); runtime=td/'runtime'; resources=td/'resources/mcp-providers/app.test/default'; runtime.mkdir(parents=True); resources.mkdir(parents=True)
     (resources/'mcp.yml').write_text('endpoint: /mcp\n')
-    (runtime/'internal-token').write_text('runtime-acceptance-token')
-    env=os.environ|{'MCP_RESOURCE_ROOT':str(td/'resources/mcp-providers'),'MCP_NGINX_OUTPUT':str(td/'generated.conf'),'MCP_CATALOG_OUTPUT':str(runtime/'providers.json'),'MCP_INTERNAL_TOKEN':'runtime-acceptance-token'}
+    env=os.environ|{'MCP_RESOURCE_ROOT':str(td/'resources/mcp-providers'),'MCP_NGINX_OUTPUT':str(td/'generated.conf'),'MCP_CATALOG_OUTPUT':str(runtime/'providers.json')}
     run('sh',str(ROOT/'content/generate-lazycat-mcp-proxy.sh'),env=env)
     lease_port=0
     import socket
     with socket.socket() as sock: sock.bind(('127.0.0.1',0)); lease_port=sock.getsockname()[1]
-    lease_env=os.environ|{'PORT':str(lease_port),'LEASE_TTL_MS':'10000','INTERNAL_TOKEN_FILE':str(runtime/'internal-token'),'CATALOG_FILE':str(runtime/'providers.json'),'TEST_ALLOW_LOOPBACK':'1'}
+    lease_env=os.environ|{'PORT':str(lease_port),'LEASE_TTL_MS':'10000','CATALOG_FILE':str(runtime/'providers.json'),'TEST_ALLOW_LOOPBACK':'1'}
     lease=subprocess.Popen(['node',str(ROOT/'content/lazycat-ticket-lease.mjs')],env=lease_env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:
         for _ in range(50):
@@ -40,9 +39,9 @@ with tempfile.TemporaryDirectory() as td:
             except urllib.error.HTTPError as e:return e.code,dict(e.headers),e.read()
         provider=socketserver.TCPServer(('127.0.0.1',0),Provider); threading.Thread(target=provider.serve_forever,daemon=True).start()
         target=f'http://127.0.0.1:{provider.server_address[1]}/mcp'
-        h={'X-Internal-Token':'runtime-acceptance-token','X-LazyCat-Target':target,'Content-Type':'application/json'}
+        h={'X-LazyCat-Target':target,'Content-Type':'application/json'}
         assert req('/internal/proxy',h,b'{}')[0]==428
-        cap={'X-Internal-Token':'runtime-acceptance-token','X-HC-USER-TICKET':'acceptance-secret','X-HC-User-ID':'u','X-HC-SOURCE':'client'}
+        cap={'X-HC-USER-TICKET':'acceptance-secret','X-HC-User-ID':'u','X-HC-SOURCE':'client'}
         assert req('/internal/capture',cap)[0]==204
         try:
             status,headers,_=req('/internal/proxy',h,b'{}'); assert status==200,(status,_); assert Provider.seen=='acceptance-secret'; assert {k.lower():v for k,v in headers.items()}.get('mcp-session-id')=='acceptance'

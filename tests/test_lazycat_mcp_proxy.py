@@ -28,7 +28,6 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
                     "MCP_RESOURCE_ROOT": str(root),
                     "MCP_NGINX_OUTPUT": str(output),
                     "MCP_CATALOG_OUTPUT": str(catalog),
-                    "MCP_INTERNAL_TOKEN": "test-internal-token",
                 },
                 text=True,
                 capture_output=True,
@@ -43,9 +42,8 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("location = /lazycat-mcp/cloud.lazycat.app.todolist/default", nginx)
-        self.assertIn("proxy_pass http://lazycat-ticket-lease:8787/internal/proxy;", nginx)
+        self.assertIn("proxy_pass http://unix:/lzcapp/var/mcp-runtime/lease.sock:/internal/proxy;", nginx)
         self.assertIn("proxy_set_header X-LazyCat-Target http://app.cloud.lazycat.app.todolist.lzcx/api/mcp;", nginx)
-        self.assertIn("proxy_set_header X-Internal-Token \"test-internal-token\";", nginx)
         self.assertIn("location = /lazycat-mcp/community.lazycat.czyt.smarticky/smarticky", nginx)
         self.assertIn("proxy_set_header X-LazyCat-Target http://app.community.lazycat.czyt.smarticky.lzcx/mcp?view=default;", nginx)
         self.assertEqual(
@@ -167,7 +165,6 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
                     "MCP_RESOURCE_ROOT": str(root),
                     "MCP_NGINX_OUTPUT": str(output),
                     "MCP_CATALOG_OUTPUT": str(catalog_path),
-                    "MCP_INTERNAL_TOKEN": "test-internal-token",
                 },
                 text=True,
                 capture_output=True,
@@ -209,7 +206,6 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
                     "MCP_RESOURCE_ROOT": str(root),
                     "MCP_NGINX_OUTPUT": str(output),
                     "MCP_CATALOG_OUTPUT": str(catalog_path),
-                    "MCP_INTERNAL_TOKEN": "test-internal-token",
                 },
                 text=True,
                 capture_output=True,
@@ -261,7 +257,6 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
                     "MCP_RESOURCE_ROOT": str(root),
                     "MCP_NGINX_OUTPUT": str(output),
                     "MCP_CATALOG_OUTPUT": str(catalog_path),
-                    "MCP_INTERNAL_TOKEN": "test-internal-token",
                 },
                 text=True,
                 capture_output=True,

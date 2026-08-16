@@ -23,7 +23,7 @@ test('adds a deterministic ticket-free managed server', async () => {
   await h.run()
   const add = h.calls.find(call => call.method === 'POST' && call.url === '/api/hermes/mcp/servers')
   assert.equal(add.body.name, managedName(provider))
-  assert.deepEqual(add.body.config, { url: 'http://nginx/lazycat-mcp/cloud.lazycat.app.todo/default', _lazycat_managed: true })
+  assert.deepEqual(add.body.config, { url: 'http://nginx/lazycat-mcp/cloud.lazycat.app.todo/default' })
   assert.equal(h.calls.at(-1).url, '/api/hermes/mcp/reload')
 })
 
@@ -38,12 +38,12 @@ test('does not overwrite an unmarked colliding user server', async () => {
 test('updates a marked managed server and removes only marked orphans', async () => {
   const name = managedName(provider)
   const h = harness([provider], [
-    { name, raw_config: { url: 'http://nginx/old', _lazycat_managed: true } },
-    { name: 'lazycat-projected--orphan', raw_config: { url: 'http://nginx/orphan', _lazycat_managed: true } },
+    { name, raw_config: { url: 'http://nginx/lazycat-mcp/cloud.lazycat.app.todo/default' } },
+    { name: 'lazycat-projected--orphan--default', raw_config: { url: 'http://nginx/lazycat-mcp/orphan/default' } },
     { name: 'lazycat-projected--user', raw_config: { url: 'http://user.example/mcp' } },
   ])
   await h.run()
-  assert.equal(h.calls.some(call => call.method === 'PATCH' && call.url.endsWith(encodeURIComponent(name))), true)
-  assert.equal(h.calls.some(call => call.method === 'DELETE' && call.url.endsWith('lazycat-projected--orphan')), true)
+  assert.equal(h.calls.some(call => call.method === 'PATCH'), false)
+  assert.equal(h.calls.some(call => call.method === 'DELETE' && call.url.endsWith('lazycat-projected--orphan--default')), true)
   assert.equal(h.calls.some(call => call.url.endsWith('lazycat-projected--user') && ['PATCH', 'DELETE'].includes(call.method)), false)
 })
