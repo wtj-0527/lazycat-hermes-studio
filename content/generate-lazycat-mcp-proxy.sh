@@ -10,7 +10,7 @@ mkdir -p "$(dirname "$NGINX_OUTPUT")" "$(dirname "$CATALOG_OUTPUT")"
 nginx_tmp="${NGINX_OUTPUT}.tmp.$$"
 catalog_tmp="${CATALOG_OUTPUT}.tmp.$$"
 files_tmp="${TMPDIR:-/tmp}/lazycat-mcp-files.$$"
-trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$files_tmp"' EXIT HUP INT TERM
+trap 'rm -f "$nginx_tmp" "$catalog_tmp" "$files_tmp"' 0 HUP INT TERM
 
 cat >"$nginx_tmp" <<EOF
 # generated LazyCat MCP routes; do not edit
@@ -27,14 +27,21 @@ first=1
 # runtime dependency to the Nginx image. Fail closed on YAML features outside
 # this subset: top-level plain scalar mappings and two-space plain list items.
 read_endpoint() {
+    # YAML 1.2 forbids C0 controls other than LF. We intentionally reject CR
+    # and TAB too because this strict subset has no quoted scalars.
+    if ! LC_ALL=C od -An -tu1 "$1" | awk '
+        { for (i = 1; i <= NF; i++) if (($i >= 0 && $i <= 9) || ($i >= 11 && $i <= 31) || $i == 127) exit 1 }
+    '; then
+        return 2
+    fi
     awk '
         BEGIN { endpoint_count = 0; list_open = 0 }
-        /\r|\t/ { exit 2 }
         /^[[:space:]]*$/ || /^[[:space:]]*#/ { next }
-        /^[A-Za-z][A-Za-z0-9_-]*:([ ]+.*)?$/ {
+        /^[A-Za-z][A-Za-z0-9_-]*:($|[ ]+.*$)/ {
             line = $0
             key = line
             sub(/:.*/, "", key)
+            if (seen[key]++) exit 2
             value = line
             sub(/^[^:]*:([ ]+)?/, "", value)
             if (value ~ /[][{}]/ || value ~ /: / || value ~ /^[&*!|>"'"'"'%@`?-]/) exit 2
@@ -59,7 +66,16 @@ read_endpoint() {
 }
 
 if [ -d "$RESOURCE_ROOT" ]; then
-    find "$RESOURCE_ROOT" -mindepth 3 -maxdepth 3 -type f -name mcp.yml -print | LC_ALL=C sort >"$files_tmp"
+    : >"$files_tmp"
+    for package_dir in "$RESOURCE_ROOT"/*; do
+        [ -d "$package_dir" ] || continue
+        for resource_dir in "$package_dir"/*; do
+            [ -d "$resource_dir" ] || continue
+            [ -f "$resource_dir/mcp.yml" ] || continue
+            printf '%s\n' "$resource_dir/mcp.yml" >>"$files_tmp"
+        done
+    done
+    LC_ALL=C sort -o "$files_tmp" "$files_tmp"
 else
     : >"$files_tmp"
 fi
@@ -115,6 +131,6 @@ done <"$files_tmp"
 printf '\n]\n' >>"$catalog_tmp"
 mv "$nginx_tmp" "$NGINX_OUTPUT"
 mv "$catalog_tmp" "$CATALOG_OUTPUT"
-trap - EXIT HUP INT TERM
+trap - 0 HUP INT TERM
 
 echo "[mcp-proxy] generated $(grep -c '^location = /lazycat-mcp/.* {' "$NGINX_OUTPUT") route entries"

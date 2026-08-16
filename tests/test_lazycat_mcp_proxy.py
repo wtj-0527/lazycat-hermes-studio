@@ -72,6 +72,8 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
             ("cloud.lazycat.app.variable", "default", "endpoint: /mcp?$arg_target\n"),
             ("cloud.lazycat.app.nospace", "default", "endpoint:/should-not-be-a-mapping\n"),
             ("cloud.lazycat.app.tab", "default", "endpoint: /mcp\tbad\n"),
+            ("cloud.lazycat.app.control", "default", "name: bad\vvalue\nendpoint: /accepted\n"),
+            ("cloud.lazycat.app.duplicate-key", "default", "name: first\nname: second\nendpoint: /accepted\n"),
             ("cloud.lazycat.app.invalid-yaml", "default", "this: [is: not: yaml\nendpoint: /accepted-anyway\n"),
             ("cloud.lazycat.app.nested", "default", "server:\n  endpoint: /nested\n"),
             ("cloud.lazycat.app.multiline", "default", "endpoint: /mcp\nendpoint: /second\n"),
@@ -85,10 +87,14 @@ class LazycatMcpProxyGeneratorTest(unittest.TestCase):
         self.assertNotIn("cloud.lazycat.app.variable", nginx)
         self.assertNotIn("cloud.lazycat.app.nospace", nginx)
         self.assertNotIn("cloud.lazycat.app.tab", nginx)
+        self.assertNotIn("cloud.lazycat.app.control", nginx)
+        self.assertNotIn("cloud.lazycat.app.duplicate-key", nginx)
         self.assertNotIn("cloud.lazycat.app.invalid-yaml", nginx)
         self.assertNotIn("cloud.lazycat.app.nested", nginx)
         self.assertNotIn("cloud.lazycat.app.multiline", nginx)
         self.assertNotIn("cloud.lazycat.app.missing", nginx)
+        self.assertIsInstance(catalog, list)
+        assert isinstance(catalog, list)
         self.assertEqual([item["package_id"] for item in catalog], ["cloud.lazycat.app.good"])
 
     def test_empty_resource_tree_still_emits_valid_empty_outputs(self):
