@@ -1,7 +1,7 @@
 ---
 name: lazycat-projected-mcp-configuration
 description: Scan and install every available LazyCat MCP provider.
-version: 1.1.0
+version: 1.2.0
 author: 王.W, Hermes Agent
 license: AGPL-3.0
 platforms: [linux]
@@ -24,7 +24,8 @@ The requested result is:
 3. install every valid provider in every installed Coding Agent that has a supported MCP configuration surface;
 4. inject the same providers into Ekko runs when the current run API supports `mcpServers` or `mcp_servers`;
 5. run real read-back and MCP `tools/list` verification;
-6. return the final result matrix.
+6. resolve and return a clickable user-facing application access link for every installed provider;
+7. return the final result matrix.
 
 Continue calling tools until all available consumers are configured and verified, or a concrete error blocks an individual provider/consumer pair. A missing provider is skipped. A missing consumer is skipped. Neither condition blocks the remaining work.
 
@@ -176,6 +177,33 @@ Do not treat `tools/list` as proof that an application plugin, file, browser, de
 
 One provider failure must not stop verification of independent providers.
 
+## Step 5 — Return the User Access Links
+
+After installation and verification, resolve a clickable user-facing application access link for every configured provider. This is a mandatory delivery step, not optional follow-up information.
+
+Keep these two addresses separate:
+
+| Address | Purpose |
+|---|---|
+| MCP endpoint | Agent protocol traffic, for example `http://app.<package-id>.lzcx<endpoint>` |
+| Application access link | The link a human opens to enter the corresponding LazyCat application or feature |
+
+Never present the MCP endpoint as the application access link.
+
+Resolve each application access link only from an authoritative source available in the current environment, such as projected application metadata, the LazyCat application/provider catalog, or an installed LazyCat API that explicitly returns the launch URL. Verify that the returned link belongs to the same `package_id` as the provider.
+
+**Do not invent or infer a URL pattern from one example.** Do not add a username, hostname, domain suffix, path, port, or scheme unless the authoritative source or the user-supplied rule requires it.
+
+If an authoritative source does not expose the application access link or the link-generation rule is unknown:
+
+1. finish the independent MCP configuration and protocol verification that can be completed safely;
+2. collect all affected provider names and package IDs;
+3. ask the user once for the LazyCat access-link rule or exact links;
+4. after the user answers, generate and return every link and verify the package-to-link mapping;
+5. do not claim the delivery is complete before the links have been returned.
+
+Do not silently end with `ACCESS_URL_UNKNOWN` when the user is available to clarify the rule. Asking the user is required when the rule cannot be retrieved.
+
 ## Required Final Status
 
 Use only evidence-backed statuses:
@@ -201,6 +229,8 @@ Return:
 - MCP protocol result and tool count;
 - new-run visibility result;
 - application-readiness result;
+- the verified clickable application access link for the provider;
+- the separate MCP endpoint, clearly labeled as non-user-facing;
 - exact blocked category without secrets.
 
 Do not report completion if only the scan ran. Do not report installation if only a file was edited without parse/read-back. Do not report usability if MCP protocol verification did not run.
