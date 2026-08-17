@@ -1,7 +1,7 @@
 ---
 name: lazycat-projected-mcp-configuration
 description: Scan and install every available LazyCat MCP provider.
-version: 1.3.0
+version: 1.4.0
 author: 王.W, Hermes Agent
 license: AGPL-3.0
 platforms: [linux]
@@ -190,43 +190,30 @@ Keep these two addresses separate:
 
 Never present the MCP endpoint as the application access link.
 
-Resolve each application access link from the actual LazyCat application instance assigned to the current user. The external access-link rule is:
-
-```text
-https://<actual-instance-subdomain>.<machine-name>.heiyu.space/
-```
-
-The two variable parts must be discovered from authoritative runtime information:
-
-- `actual-instance-subdomain` is the subdomain LazyCat actually assigned to that user's installed application instance. It may be the manifest base subdomain or the base subdomain plus a numeric suffix.
-- `machine-name` is the actual target LazyCat machine name, such as the machine selected by the current authenticated application context or returned by the LazyCat device/application API.
+Resolve each application access link from the complete external access URL assigned to the current user's actual LazyCat application instance.
 
 For every provider:
 
 1. map `package_id` to its installed LazyCat application;
 2. query the current user's installed application instance through an authoritative LazyCat application/device API, projected application metadata, or the current authenticated application context;
-3. read the instance's actual assigned subdomain—do not derive the numeric suffix from username, user ID, installation order, or another user's instance;
-4. read the target machine's actual external name;
-5. generate the HTTPS link using the rule above;
+3. read the complete externally accessible HTTPS URL or externally assigned hostname returned for that exact instance;
+4. when only a hostname is returned, add only the documented HTTPS scheme and root path—do not parse, rebuild, normalize, or explain the hostname structure;
+5. verify that the returned instance belongs to the same `package_id` and current authorized user context;
 6. perform a non-destructive reachability check without exposing credentials;
-7. return the link as clickable Markdown.
+7. return the URL as clickable Markdown to the requesting user.
 
-For example, if the authoritative lookup returns instance subdomain `lazycat-agent-browser5` on machine `nasw`, return:
+A multi-instance suffix or other routing component is part of the assigned hostname. It must come from the authoritative instance lookup. Never derive it from username, user ID, installation order, another user's instance, or a public naming rule.
 
-```text
-https://lazycat-agent-browser5.nasw.heiyu.space/
-```
+Treat the complete access hostname and URL as environment-sensitive delivery data:
 
-The example demonstrates formatting only. The suffix `5` must still come from the actual instance lookup.
+- return it only to the authorized requesting user or authorized private conversation;
+- do not write concrete hostnames, deployment identifiers, machine identifiers, internal domains, or user-instance mappings into public repositories, public issues, release notes, examples, or logs;
+- in public artifacts, use placeholders such as `<instance-access-url>` and refer to the target as "the target environment";
+- do not decompose the hostname to expose or label any infrastructure component.
 
-If the authoritative lookup does not return the instance subdomain, continue trying the available LazyCat application/device APIs and metadata sources. Do not ask the user to supply each application's exact link and do not silently end with `ACCESS_URL_UNKNOWN` while a retrievable source remains.
+If the authoritative lookup does not return an instance access URL or hostname, continue trying the available LazyCat application/device APIs and metadata sources. Do not ask the user to supply each application's exact link and do not silently end with `ACCESS_URL_UNKNOWN` while a retrievable source remains.
 
-Ask the user only when the environment does not expose either:
-
-- the machine-name/domain rule; or
-- any authoritative way to resolve the current user's assigned instance subdomain.
-
-When clarification is genuinely required, ask once for the missing general rule—not for links that can be generated after retrieving instance subdomains. After the user answers, generate and return all links. Do not claim delivery is complete before the links have been returned.
+Ask the user only when the current private environment exposes no authoritative way to resolve the current user's complete instance access URL. When clarification is genuinely required, ask once for the missing lookup method, not for a public hostname pattern. After the user answers, resolve and privately return all links. Do not claim delivery is complete before the links have been returned.
 
 ## Required Final Status
 

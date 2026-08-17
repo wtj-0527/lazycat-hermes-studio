@@ -24,7 +24,7 @@
 
 ## 修复 LazyCat 安装校验失败
 
-- `2026.08.16.1409` 在 nasw 安装时被 LazyCat 拒绝，原因为 `hermes-webui` 同时包含 `setup_script` 与自定义 `entrypoint`，平台报错 `cannot define both init and entrypoint/command`；该版本撤回，不应继续安装。
+- `2026.08.16.1409` 在目标测试环境安装时被 LazyCat 拒绝，原因为 `hermes-webui` 同时包含 `setup_script` 与自定义 `entrypoint`，平台报错 `cannot define both init and entrypoint/command`；该版本撤回，不应继续安装。
 - 保留原有 rootfs 持久化 `setup_script`，删除冲突的 WebUI `entrypoint`。
 - 使用 Node 原生 `NODE_OPTIONS=--import=/lzcapp/pkg/content/lazycat-original-url-proxy.mjs` 在原启动进程内加载 scoped loopback relay；原始主机映射并入现有 `setup_script`。relay 仅在 Hermes WebUI 主 Entrypoint 或直接测试时启动，无关 Node 子进程不会重复绑定端口。
 - 新增安装结构回归：任何包含 `setup_script` 的服务禁止同时定义 `entrypoint` 或 `command`；完整 Node 测试4/4、Python测试33/33及目标镜像原Entrypoint运行验收通过。
