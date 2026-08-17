@@ -9,6 +9,7 @@ const socketPath = process.env.SOCKET_PATH || ''
 const socketGid = Number(process.env.SOCKET_GID || 101)
 const testLoopback = process.env.TEST_ALLOW_LOOPBACK === '1'
 const catalogFile = process.env.CATALOG_FILE || ''
+const lazycatUserId = process.env.LAZYCAT_USER_ID || ''
 let lease = null
 
 function send(res, status, body = '') {
@@ -31,14 +32,14 @@ function validTarget(value) {
   return url
 }
 
-function catalogAllows(url) {
-  if (testLoopback) return true
-  if (!catalogFile) return false
+function catalogProvider(url) {
+  if (testLoopback) return { package_id: 'test-loopback', endpoint: url.pathname }
+  if (!catalogFile) return null
   try {
     const providers = JSON.parse(readFileSync(catalogFile, 'utf8'))
-    return providers.some(provider => `http://app.${provider.package_id}.lzcx${provider.endpoint}` === url.href)
+    return providers.find(provider => `http://app.${provider.package_id}.lzcx${provider.endpoint}` === url.href) || null
   } catch {
-    return false
+    return null
   }
 }
 
@@ -64,7 +65,7 @@ function capture(req, res) {
   const source = req.headers['x-hc-source']
   const ticket = req.headers['x-hc-user-ticket']
   const userId = req.headers['x-hc-user-id']
-  if (source !== 'client' || typeof ticket !== 'string' || !ticket || typeof userId !== 'string' || !userId) {
+  if (source !== 'client' || typeof ticket !== 'string' || !ticket || typeof userId !== 'string' || !userId || !lazycatUserId || userId !== lazycatUserId) {
     return send(res, 403)
   }
   if (lease && Date.now() < lease.expiresAt && lease.userId !== userId) return send(res, 409)
@@ -77,8 +78,9 @@ function proxy(req, res) {
   const ticket = currentTicket()
   if (!ticket) return send(res, 428, 'Open Hermes Studio once to authorize LazyCat MCP access.')
   const target = validTarget(req.headers['x-lazycat-target'])
+  const provider = target && catalogProvider(target)
   if (!['GET', 'POST', 'DELETE'].includes(req.method || '')) return send(res, 405)
-  if (!target || !catalogAllows(target)) return send(res, 400, 'Invalid managed LazyCat MCP target.')
+  if (!target || !provider) return send(res, 400, 'Invalid managed LazyCat MCP target.')
 
   const headers = stripHopByHop({ ...req.headers, host: target.host })
   for (const name of Object.keys(headers)) {
@@ -86,7 +88,9 @@ function proxy(req, res) {
   }
   headers['x-hc-user-ticket'] = ticket
   const upstream = http.request(target, { method: req.method, headers }, upstreamRes => {
-    if (upstreamRes.statusCode === 401 || upstreamRes.statusCode === 403) lease = null
+    if (upstreamRes.statusCode === 401 || upstreamRes.statusCode === 403) {
+      console.error(`[lazycat-ticket-lease] upstream.auth_rejected package_id=${provider.package_id} endpoint=${provider.endpoint} status=${upstreamRes.statusCode}`)
+    }
     const responseHeaders = stripHopByHop({ ...upstreamRes.headers, 'cache-control': 'no-store' })
     delete responseHeaders['content-length']
     res.writeHead(upstreamRes.statusCode || 502, responseHeaders)

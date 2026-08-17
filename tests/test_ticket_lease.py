@@ -57,16 +57,18 @@ class TicketLeaseTest(unittest.TestCase):
         threading.Thread(target=self.upstream.serve_forever, daemon=True).start()
         self.port = free_port()
         self.token = "lease-test-token"
+        self.expected_log_fragments = []
         env = os.environ.copy()
         # Runtime NODE_OPTIONS/SOCKET_PATH from the installed wrapper must not
         # redirect this isolated TCP fixture into the production-style UDS.
-        for name in ("NODE_OPTIONS", "SOCKET_PATH", "SOCKET_GID", "CATALOG_FILE"):
+        for name in ("NODE_OPTIONS", "SOCKET_PATH", "SOCKET_GID", "CATALOG_FILE", "LAZYCAT_USER_ID"):
             env.pop(name, None)
         env.update({
             "PORT": str(self.port),
             "LEASE_TTL_MS": "250",
             "ALLOWED_HOST_SUFFIX": ".lzcx",
             "TEST_ALLOW_LOOPBACK": "1",
+            "LAZYCAT_USER_ID": "user-a",
         })
         self.proc = subprocess.Popen(
             ["node", str(SERVER)], env=env,
@@ -96,6 +98,9 @@ class TicketLeaseTest(unittest.TestCase):
         if self.proc.stderr:
             self.proc.stderr.close()
         self.assertNotIn("secret-ticket-A", output)
+        self.assertNotIn("secret-ticket-B", output)
+        for fragment in self.expected_log_fragments:
+            self.assertIn(fragment, output)
 
     @property
     def target(self):
@@ -132,12 +137,22 @@ class TicketLeaseTest(unittest.TestCase):
         self.assertEqual(self.proxy()[0], 428)
         self.assertEqual(UpstreamHandler.seen, [])
 
-    def test_auth_rejection_revokes_ticket(self):
+    def test_provider_401_does_not_revoke_ticket_for_other_providers(self):
         self.capture()
         UpstreamHandler.status = 401
         self.assertEqual(self.proxy()[0], 401)
         UpstreamHandler.status = 200
-        self.assertEqual(self.proxy()[0], 428)
+        self.assertEqual(self.proxy()[0], 200)
+
+    def test_provider_403_does_not_revoke_ticket_for_other_providers(self):
+        self.capture()
+        UpstreamHandler.status = 403
+        self.assertEqual(self.proxy()[0], 403)
+        self.expected_log_fragments.append(
+            "upstream.auth_rejected package_id=test-loopback endpoint=/mcp status=403"
+        )
+        UpstreamHandler.status = 200
+        self.assertEqual(self.proxy()[0], 200)
 
     def test_capture_requires_trusted_source_and_identity(self):
         status, _, _ = request(self.port, "POST", "/internal/capture", {
@@ -150,12 +165,9 @@ class TicketLeaseTest(unittest.TestCase):
         })
         self.assertEqual(status, 403)
 
-    def test_capture_rejects_different_user_while_lease_is_live(self):
-        self.assertEqual(self.capture(user="user-a")[0], 204)
-        self.assertEqual(self.capture(ticket="secret-ticket-B", user="user-b")[0], 409)
-        self.assertEqual(self.proxy()[0], 200)
-        seen_headers = {key.lower(): value for key, value in UpstreamHandler.seen[-1][1].items()}
-        self.assertEqual(seen_headers["x-hc-user-ticket"], "secret-ticket-A")
+    def test_capture_rejects_user_not_bound_to_deployed_instance(self):
+        self.assertEqual(self.capture(ticket="secret-ticket-B", user="user-b")[0], 403)
+        self.assertEqual(self.proxy()[0], 428)
 
     def test_proxy_rejects_arbitrary_targets(self):
         self.capture()
