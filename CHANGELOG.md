@@ -1,3 +1,14 @@
+# 2026.08.17.1153（测试候选）
+
+## LazyCat MCP Provider 授权隔离
+
+- Hermes Studio 与 ticket lease sidecar 运行镜像同步升级至 `v0.6.43-pr2584-2205330a-202608162237`。
+- ticket capture 现在必须匹配当前多实例部署用户，拒绝其他用户票据，避免“capture 204、Provider 403”的伪成功。
+- 单个 Provider 返回 `401/403` 时仅原样返回并记录无凭据状态日志，不再清空共享 ticket lease；其他 Provider 可继续独立完成协议检测。
+- 保留租约 TTL 到期后的全局失效语义；未安装、未部署、未合并、未发布。
+
+---
+
 # 2026.08.16.2029
 
 ## History GROUP 折叠与键盘分页

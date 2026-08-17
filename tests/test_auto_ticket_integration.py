@@ -6,6 +6,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+RUNTIME_IMAGE = "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.43-pr2584-2205330a-202608162237"
 
 
 class AutoTicketIntegrationContract(unittest.TestCase):
@@ -16,12 +17,25 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh", manifest)
         self.assertIn("SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock", manifest)
         self.assertIn("CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json", manifest)
+        self.assertIn("LAZYCAT_USER_ID={{ .S.DeployUID }}", manifest)
         self.assertIn("SOCKET_GID=101", manifest)
         self.assertNotIn("TEST_ALLOW_LOOPBACK", manifest)
         lease = (ROOT / "content" / "lazycat-ticket-lease.mjs").read_text()
         self.assertIn("0o660", lease)
         self.assertNotIn("0o666", lease)
         self.assertNotIn("build:", manifest)
+        services = yaml.safe_load(manifest)["services"]
+        self.assertEqual(services["lazycat-ticket-lease"]["image"], RUNTIME_IMAGE)
+        self.assertEqual(services["hermes-webui"]["image"], RUNTIME_IMAGE)
+
+    def test_ticket_capture_is_bound_to_instance_user_and_provider_auth_is_isolated(self):
+        lease = (ROOT / "content" / "lazycat-ticket-lease.mjs").read_text()
+        self.assertIn("process.env.LAZYCAT_USER_ID", lease)
+        self.assertIn("userId !== lazycatUserId", lease)
+        self.assertNotIn("upstreamRes.statusCode === 401 || upstreamRes.statusCode === 403) lease = null", lease)
+        self.assertIn("package_id=${provider.package_id} endpoint=${provider.endpoint} status=${upstreamRes.statusCode}", lease)
+        self.assertNotIn("ticket=${", lease)
+        self.assertNotIn("userId=${", lease)
 
     def test_nginx_captures_ticket_and_bootstraps_without_exposing_it(self):
         nginx = (ROOT / "content" / "nginx.conf").read_text()
