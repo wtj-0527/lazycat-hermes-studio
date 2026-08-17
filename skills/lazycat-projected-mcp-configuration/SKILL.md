@@ -1,7 +1,7 @@
 ---
 name: lazycat-projected-mcp-configuration
 description: Scan and install every available LazyCat MCP provider.
-version: 1.2.0
+version: 1.3.0
 author: 王.W, Hermes Agent
 license: AGPL-3.0
 platforms: [linux]
@@ -190,19 +190,43 @@ Keep these two addresses separate:
 
 Never present the MCP endpoint as the application access link.
 
-Resolve each application access link only from an authoritative source available in the current environment, such as projected application metadata, the LazyCat application/provider catalog, or an installed LazyCat API that explicitly returns the launch URL. Verify that the returned link belongs to the same `package_id` as the provider.
+Resolve each application access link from the actual LazyCat application instance assigned to the current user. The external access-link rule is:
 
-**Do not invent or infer a URL pattern from one example.** Do not add a username, hostname, domain suffix, path, port, or scheme unless the authoritative source or the user-supplied rule requires it.
+```text
+https://<actual-instance-subdomain>.<machine-name>.heiyu.space/
+```
 
-If an authoritative source does not expose the application access link or the link-generation rule is unknown:
+The two variable parts must be discovered from authoritative runtime information:
 
-1. finish the independent MCP configuration and protocol verification that can be completed safely;
-2. collect all affected provider names and package IDs;
-3. ask the user once for the LazyCat access-link rule or exact links;
-4. after the user answers, generate and return every link and verify the package-to-link mapping;
-5. do not claim the delivery is complete before the links have been returned.
+- `actual-instance-subdomain` is the subdomain LazyCat actually assigned to that user's installed application instance. It may be the manifest base subdomain or the base subdomain plus a numeric suffix.
+- `machine-name` is the actual target LazyCat machine name, such as the machine selected by the current authenticated application context or returned by the LazyCat device/application API.
 
-Do not silently end with `ACCESS_URL_UNKNOWN` when the user is available to clarify the rule. Asking the user is required when the rule cannot be retrieved.
+For every provider:
+
+1. map `package_id` to its installed LazyCat application;
+2. query the current user's installed application instance through an authoritative LazyCat application/device API, projected application metadata, or the current authenticated application context;
+3. read the instance's actual assigned subdomain—do not derive the numeric suffix from username, user ID, installation order, or another user's instance;
+4. read the target machine's actual external name;
+5. generate the HTTPS link using the rule above;
+6. perform a non-destructive reachability check without exposing credentials;
+7. return the link as clickable Markdown.
+
+For example, if the authoritative lookup returns instance subdomain `lazycat-agent-browser5` on machine `nasw`, return:
+
+```text
+https://lazycat-agent-browser5.nasw.heiyu.space/
+```
+
+The example demonstrates formatting only. The suffix `5` must still come from the actual instance lookup.
+
+If the authoritative lookup does not return the instance subdomain, continue trying the available LazyCat application/device APIs and metadata sources. Do not ask the user to supply each application's exact link and do not silently end with `ACCESS_URL_UNKNOWN` while a retrievable source remains.
+
+Ask the user only when the environment does not expose either:
+
+- the machine-name/domain rule; or
+- any authoritative way to resolve the current user's assigned instance subdomain.
+
+When clarification is genuinely required, ask once for the missing general rule—not for links that can be generated after retrieving instance subdomains. After the user answers, generate and return all links. Do not claim delivery is complete before the links have been returned.
 
 ## Required Final Status
 
