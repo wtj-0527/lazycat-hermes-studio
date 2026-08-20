@@ -90,8 +90,8 @@ class AutoTicketIntegrationContract(unittest.TestCase):
     def test_bootstrap_only_captures_and_renews_ticket(self):
         script = (ROOT / "content" / "lazycat-mcp-bootstrap.js").read_text()
         self.assertIn("/lazycat-mcp/capture", script)
-        self.assertIn("capture.ok", script)
-        self.assertIn("capture.renew.ok", script)
+        self.assertNotIn("console.", script)
+        self.assertNotIn("[lazycat-mcp]", script)
         self.assertNotIn("/api/hermes/mcp/servers", script)
         self.assertNotIn("/api/hermes/mcp/reload", script)
         self.assertNotIn("hermes_api_key", script)
