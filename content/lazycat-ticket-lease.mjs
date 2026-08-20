@@ -10,7 +10,6 @@ const socketPath = process.env.SOCKET_PATH || ''
 const socketGid = Number(process.env.SOCKET_GID || 101)
 const testLoopback = process.env.TEST_ALLOW_LOOPBACK === '1'
 const catalogFile = process.env.CATALOG_FILE || ''
-const lazycatUserId = process.env.LAZYCAT_USER_ID || ''
 const apiGatewayAddress = process.env.LZCAPP_API_GATEWAY_ADDRESS || ''
 let lease = null
 
@@ -190,15 +189,35 @@ function currentTicket() {
   return lease.ticket
 }
 
+function captureState(source, ticket, userId) {
+  const sourceClient = source === 'client'
+  const ticketPresent = typeof ticket === 'string' && ticket.length > 0
+  const userPresent = typeof userId === 'string' && userId.length > 0
+  return { sourceClient, ticketPresent, userPresent }
+}
+
+function logCapture(event, state) {
+  console.info(
+    `[lazycat-ticket-lease] ${event}` +
+    ` source_client=${state.sourceClient}` +
+    ` ticket_present=${state.ticketPresent}` +
+    ` user_present=${state.userPresent}`
+  )
+}
+
 function capture(req, res) {
   const source = req.headers['x-hc-source']
   const ticket = req.headers['x-hc-user-ticket']
   const userId = req.headers['x-hc-user-id']
-  if (source !== 'client' || typeof ticket !== 'string' || !ticket || typeof userId !== 'string' || !userId || !lazycatUserId || userId !== lazycatUserId) {
+  const state = captureState(source, ticket, userId)
+  if (!state.sourceClient || !state.ticketPresent || !state.userPresent) {
+    logCapture('capture.rejected', state)
     return send(res, 403)
   }
   if (lease && Date.now() < lease.expiresAt && lease.userId !== userId) return send(res, 409)
+  const renewed = Boolean(lease && Date.now() < lease.expiresAt && lease.userId === userId)
   lease = { ticket, userId, expiresAt: Date.now() + ttlMs }
+  logCapture(renewed ? 'capture.renewed' : 'capture.accepted', state)
   res.writeHead(204, { 'Cache-Control': 'no-store' })
   res.end()
 }

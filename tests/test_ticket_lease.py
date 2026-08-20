@@ -116,7 +116,6 @@ server.listen(port, '127.0.0.1')
             "LEASE_TTL_MS": "250",
             "ALLOWED_HOST_SUFFIX": ".lzcx",
             "TEST_ALLOW_LOOPBACK": "1",
-            "LAZYCAT_USER_ID": "user-a",
             "LZCAPP_API_GATEWAY_ADDRESS": f"127.0.0.1:{self.gateway_port}",
         })
         self.proc = subprocess.Popen(
@@ -158,6 +157,7 @@ server.listen(port, '127.0.0.1')
             self.proc.stderr.close()
         self.assertNotIn("secret-ticket-A", output)
         self.assertNotIn("secret-ticket-B", output)
+        self.assertNotIn("secret-user-B", output)
         for fragment in self.expected_log_fragments:
             self.assertIn(fragment, output)
 
@@ -263,15 +263,44 @@ server.listen(port, '127.0.0.1')
             "X-HC-USER-TICKET": "secret-ticket-A", "X-HC-SOURCE": "client"
         })
         self.assertEqual(status, 403)
+        self.expected_log_fragments.append(
+            "capture.rejected source_client=true ticket_present=true user_present=false"
+        )
         status, _, _ = request(self.port, "POST", "/internal/capture", {
             "X-HC-USER-TICKET": "secret-ticket-A",
+            "X-HC-User-ID": "secret-user-B",
             "X-HC-SOURCE": "app:evil",
         })
         self.assertEqual(status, 403)
+        self.expected_log_fragments.append(
+            "capture.rejected source_client=false ticket_present=true user_present=true"
+        )
 
-    def test_capture_rejects_user_not_bound_to_deployed_instance(self):
-        self.assertEqual(self.capture(ticket="secret-ticket-B", user="user-b")[0], 403)
-        self.assertEqual(self.proxy()[0], 428)
+    def test_capture_logs_accept_and_renew_without_identity_values(self):
+        self.assertEqual(self.capture()[0], 204)
+        self.expected_log_fragments.append(
+            "capture.accepted source_client=true ticket_present=true user_present=true"
+        )
+        self.assertEqual(self.capture(ticket="secret-ticket-B")[0], 204)
+        self.expected_log_fragments.append(
+            "capture.renewed source_client=true ticket_present=true user_present=true"
+        )
+
+    def test_capture_binds_to_first_trusted_request_user(self):
+        self.assertEqual(self.capture(ticket="secret-ticket-B", user="secret-user-B")[0], 204)
+        self.expected_log_fragments.append(
+            "capture.accepted source_client=true ticket_present=true user_present=true"
+        )
+        status, _, body = self.visible_apps()
+        self.assertEqual(status, 200)
+        self.assertNotIn("secret-user-B", body.decode())
+
+    def test_capture_rejects_different_user_while_lease_is_live(self):
+        self.assertEqual(self.capture()[0], 204)
+        self.assertEqual(self.capture(ticket="secret-ticket-B", user="secret-user-B")[0], 409)
+        self.assertEqual(self.proxy()[0], 200)
+        seen_headers = {key.lower(): value for key, value in UpstreamHandler.seen[-1][1].items()}
+        self.assertEqual(seen_headers["x-hc-user-ticket"], "secret-ticket-A")
 
     def test_proxy_rejects_arbitrary_targets(self):
         self.capture()

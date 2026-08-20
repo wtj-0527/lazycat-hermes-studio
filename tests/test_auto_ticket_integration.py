@@ -17,7 +17,7 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh", manifest)
         self.assertIn("SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock", manifest)
         self.assertIn("CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json", manifest)
-        self.assertIn("LAZYCAT_USER_ID={{ .S.DeployUID }}", manifest)
+        self.assertNotIn("LAZYCAT_USER_ID=", manifest)
         self.assertIn("LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime", manifest)
         self.assertIn("Never construct or override the gateway address", manifest)
         self.assertNotRegex(manifest, r"(?m)^\s*-\s*LZCAPP_API_GATEWAY_ADDRESS=")
@@ -31,10 +31,12 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertEqual(services["lazycat-ticket-lease"]["image"], RUNTIME_IMAGE)
         self.assertEqual(services["hermes-webui"]["image"], RUNTIME_IMAGE)
 
-    def test_ticket_capture_is_bound_to_instance_user_and_provider_auth_is_isolated(self):
+    def test_ticket_capture_binds_to_trusted_request_user_and_provider_auth_is_isolated(self):
         lease = (ROOT / "content" / "lazycat-ticket-lease.mjs").read_text()
-        self.assertIn("process.env.LAZYCAT_USER_ID", lease)
-        self.assertIn("userId !== lazycatUserId", lease)
+        self.assertNotIn("process.env.LAZYCAT_USER_ID", lease)
+        self.assertIn("lease.userId !== userId", lease)
+        self.assertIn("!state.userPresent", lease)
+        self.assertIn("capture.rejected", lease)
         self.assertNotIn("upstreamRes.statusCode === 401 || upstreamRes.statusCode === 403) lease = null", lease)
         self.assertIn("package_id=${provider.package_id} endpoint=${provider.endpoint} status=${upstreamRes.statusCode}", lease)
         self.assertNotIn("ticket=${", lease)
@@ -88,8 +90,8 @@ class AutoTicketIntegrationContract(unittest.TestCase):
     def test_bootstrap_only_captures_and_renews_ticket(self):
         script = (ROOT / "content" / "lazycat-mcp-bootstrap.js").read_text()
         self.assertIn("/lazycat-mcp/capture", script)
-        self.assertIn("capture.ok", script)
-        self.assertIn("capture.renew.ok", script)
+        self.assertNotIn("console.", script)
+        self.assertNotIn("[lazycat-mcp]", script)
         self.assertNotIn("/api/hermes/mcp/servers", script)
         self.assertNotIn("/api/hermes/mcp/reload", script)
         self.assertNotIn("hermes_api_key", script)
