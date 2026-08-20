@@ -1,7 +1,7 @@
 ---
 name: lazycat-projected-mcp-configuration
-description: Scan and install every available LazyCat MCP provider.
-version: 1.4.0
+description: Install each user's visible LazyCat MCP providers.
+version: 1.5.0
 author: 王.W, Hermes Agent
 license: AGPL-3.0
 platforms: [linux]
@@ -19,13 +19,13 @@ metadata:
 
 The requested result is:
 
-1. scan the providers available in the current LazyCat Hermes Studio instance;
-2. install every valid provider as an independent MCP server in every Hermes Profile;
-3. install every valid provider in every installed Coding Agent that has a supported MCP configuration surface;
-4. inject the same providers into Ekko runs when the current run API supports `mcpServers` or `mcp_servers`;
-5. run real read-back and MCP `tools/list` verification;
-6. resolve and return a clickable user-facing application access link for every installed provider;
-7. return the final result matrix.
+1. scan the providers projected into the current LazyCat Hermes Studio instance;
+2. query the applications visible to the current user and intersect them with the projected Provider package IDs;
+3. install only Providers selected by that intersection, as independent MCP servers in every Hermes Profile;
+4. install the same selected Providers in every installed Coding Agent that has a supported MCP configuration surface;
+5. inject the same selected Providers into Ekko runs when the current run API supports `mcpServers` or `mcp_servers`;
+6. run real read-back and MCP verification;
+7. return the final result matrix, including projected Providers excluded or blocked by current-user application visibility.
 
 Continue calling tools until all available consumers are configured and verified, or a concrete error blocks an individual provider/consumer pair. A missing provider is skipped. A missing consumer is skipped. Neither condition blocks the remaining work.
 
@@ -74,15 +74,64 @@ Do not assume a fixed provider count or permanently depend on one path depth. Ac
 
 Reject malformed YAML, escaping symlinks, unsafe package IDs, duplicate conflicting names, and endpoints containing a scheme, host, fragment, control character, traversal, or non-absolute path. Continue scanning other providers after a rejection.
 
-If the scan returns zero valid providers, report `NO_PROJECTED_PROVIDERS` and stop without creating placeholders. Otherwise, proceed directly to installation; do not ask for confirmation.
+If the scan returns zero valid providers, report `NO_PROJECTED_PROVIDERS` and stop without creating placeholders. Otherwise, proceed directly to current-user application selection; do not ask for confirmation.
 
-## Step 2 — Install in Every Hermes Profile Now
+Projection is a discovery input, not proof that the current LazyCat user can see or has enabled the exporting application. Never install all projected records without current-user selection, and never hard-code a Provider allowlist: different users can receive different application grants.
+
+## Step 2 — Select by Current-User Application Visibility
+
+Use the wrapper's current-user-scoped application visibility endpoint through the private Unix socket shared only inside the current Studio instance:
+
+```bash
+curl --silent --show-error --fail \
+  --unix-socket /lzcapp/var/mcp-runtime/lease.sock \
+  http://localhost/internal/visible-apps
+```
+
+Do not expose this internal endpoint through nginx or an external application URL.
+
+The wrapper calls `PackageManager.QueryApplication` with the current authenticated user's protected ticket lease and returns only sorted unique `package_ids`. Do not call `QueryApplication` without user context, do not substitute a host-wide application inventory, and do not read or print the ticket.
+
+Normalize its returned application IDs and calculate exactly:
+
+```text
+selected package IDs = projected package IDs ∩ current-user-visible application IDs
+```
+
+Classify every projected Provider before changing consumer configuration:
+
+- package ID present in both sets: `SELECTED_FOR_CURRENT_USER` and enters the installation set;
+- package ID projected but absent from a successful, current-user-scoped application result: `SKIPPED_NOT_VISIBLE_TO_CURRENT_USER`;
+- the current-user application query is unavailable, lacks authenticated user context, errors, or cannot establish a reliable result: `BLOCKED_CURRENT_USER_APP_VISIBILITY_UNKNOWN`.
+
+Container-side application queries can be incomplete on some LazyCat environments. Therefore this intersection is a fail-closed selector for new installation, not authority for destructive cleanup. If visibility is unknown, do not install guessed Providers, do not fall back to all projected records, and continue only with non-mutating diagnostics.
+
+Never remove an existing MCP entry merely because it is absent from the visibility result, because the query failed, or because a protocol probe returned `401`/`403`. Preserve it and report the evidence gap. Removal requires a separate explicit user request backed by authoritative current state.
+
+For each selected Provider, use exactly its canonical URL:
+
+```text
+http://app.<package_id>.lzcx<endpoint>
+```
+
+The installed wrapper captures the current instance user's `X-HC-USER-TICKET` from an authenticated Studio browser request and injects it into the `.lzcx` request. Do not read, print, persist, or manually construct the ticket. Do not call host-only commands such as `lpk-manager`; they are not available or required inside a user application instance.
+
+Run MCP protocol verification independently after selection:
+
+- `initialize` and `tools/list` prove MCP protocol reachability only and must not be used as proof of current-user application entitlement;
+- upstream HTTP `401` or `403` is `BLOCKED_PROVIDER_AUTHORIZATION` for that selected Provider; it is not evidence that the projection or application-visibility result should be rewritten;
+- wrapper HTTP `428` means the current instance has not captured its user's ticket. Ask the user only to open or refresh this same Hermes Studio instance once, then retry the probe; do not classify `428` as denial and do not ask for application URLs;
+- timeout, invalid MCP response, or other transport failure is `BLOCKED_PROVIDER_UNREACHABLE`.
+
+One Provider's `401`, `403`, or transport failure must not invalidate the captured ticket or stop probes for the remaining Providers. Record sanitized status evidence without response credentials or tickets.
+
+## Step 3 — Install in Every Hermes Profile Now
 
 Use the current Hermes Studio API documentation and MCP registry API. Do not edit the Studio database.
 
 1. List all Hermes Profiles from the current API.
 2. For each Profile, list its existing MCP servers using the required `X-Hermes-Profile` scope.
-3. For every scanned provider:
+3. For every Provider selected for the current user and passing the protocol preflight:
    - create it when absent;
    - patch it when the same managed name already exists;
    - preserve every unrelated server;
@@ -92,7 +141,7 @@ Use the current Hermes Studio API documentation and MCP registry API. Do not edi
 
 A successful API write alone is not completion. Record the read-back URL, test result, and discovered tool count.
 
-## Step 3 — Install in Every Coding Agent Now
+## Step 4 — Install in Every Coding Agent Now
 
 List the Coding Agents installed in the current Studio instance. Do not use a fixed list as the discovery authority.
 
@@ -100,7 +149,7 @@ For each installed Agent, obtain its declared live configuration files or writab
 
 ### Claude Code
 
-Merge all scanned providers into the declared Claude MCP JSON, normally:
+Merge all selected and protocol-reachable Providers into the declared Claude MCP JSON, normally:
 
 ```text
 ~/.claude/mcp.json
@@ -119,7 +168,7 @@ Parse before writing, write atomically, parse again, and read back every install
 
 ### Codex
 
-Merge all scanned providers into the declared Codex TOML, normally:
+Merge all selected and protocol-reachable Providers into the declared Codex TOML, normally:
 
 ```text
 ~/.codex/config.toml
@@ -136,7 +185,7 @@ Parse before writing, avoid duplicate tables, write atomically, parse again, and
 
 ### Pi
 
-Merge all scanned providers into the Pi MCP JSON consumed by the installed adapter, normally:
+Merge all selected and protocol-reachable Providers into the Pi MCP JSON consumed by the installed adapter, normally:
 
 ```text
 ~/.pi/agent/mcp.json
@@ -148,7 +197,7 @@ Use independent `type: http` entries under `mcpServers`. Parse before writing, w
 
 Ekko does not inherit the Hermes registry or another Coding Agent's configuration file.
 
-For every new Ekko run created by the current operation, pass the complete scanned provider map through the run request's `mcpServers` or `mcp_servers` field. If the current Studio entry point cannot persist or inject external Ekko MCP servers, report exactly:
+For every new Ekko run created by the current operation, pass the complete selected and protocol-reachable Provider map through the run request's `mcpServers` or `mcp_servers` field. If the current Studio entry point cannot persist or inject external Ekko MCP servers, report exactly:
 
 ```text
 BLOCKED_EKKO_INJECTION_UNAVAILABLE
@@ -162,7 +211,7 @@ If an installed Agent exposes a documented writable MCP configuration surface, c
 
 If no documented MCP surface exists, leave it unchanged and report `UNSUPPORTED_MCP_CONFIG`. Do not guess a file path, schema, or transport.
 
-## Step 4 — Verify Now
+## Step 5 — Verify Installed Consumers
 
 After saving configurations, perform all verification that the environment allows.
 
@@ -177,44 +226,6 @@ Do not treat `tools/list` as proof that an application plugin, file, browser, de
 
 One provider failure must not stop verification of independent providers.
 
-## Step 5 — Return the User Access Links
-
-After installation and verification, resolve a clickable user-facing application access link for every configured provider. This is a mandatory delivery step, not optional follow-up information.
-
-Keep these two addresses separate:
-
-| Address | Purpose |
-|---|---|
-| MCP endpoint | Agent protocol traffic, for example `http://app.<package-id>.lzcx<endpoint>` |
-| Application access link | The link a human opens to enter the corresponding LazyCat application or feature |
-
-Never present the MCP endpoint as the application access link.
-
-Resolve each application access link from the complete external access URL assigned to the current user's actual LazyCat application instance.
-
-For every provider:
-
-1. map `package_id` to its installed LazyCat application;
-2. query the current user's installed application instance through an authoritative LazyCat application/device API, projected application metadata, or the current authenticated application context;
-3. read the complete externally accessible HTTPS URL or externally assigned hostname returned for that exact instance;
-4. when only a hostname is returned, add only the documented HTTPS scheme and root path—do not parse, rebuild, normalize, or explain the hostname structure;
-5. verify that the returned instance belongs to the same `package_id` and current authorized user context;
-6. perform a non-destructive reachability check without exposing credentials;
-7. return the URL as clickable Markdown to the requesting user.
-
-A multi-instance suffix or other routing component is part of the assigned hostname. It must come from the authoritative instance lookup. Never derive it from username, user ID, installation order, another user's instance, or a public naming rule.
-
-Treat the complete access hostname and URL as environment-sensitive delivery data:
-
-- return it only to the authorized requesting user or authorized private conversation;
-- do not write concrete hostnames, deployment identifiers, machine identifiers, internal domains, or user-instance mappings into public repositories, public issues, release notes, examples, or logs;
-- in public artifacts, use placeholders such as `<instance-access-url>` and refer to the target as "the target environment";
-- do not decompose the hostname to expose or label any infrastructure component.
-
-If the authoritative lookup does not return an instance access URL or hostname, continue trying the available LazyCat application/device APIs and metadata sources. Do not ask the user to supply each application's exact link and do not silently end with `ACCESS_URL_UNKNOWN` while a retrievable source remains.
-
-Ask the user only when the current private environment exposes no authoritative way to resolve the current user's complete instance access URL. When clarification is genuinely required, ask once for the missing lookup method, not for a public hostname pattern. After the user answers, resolve and privately return all links. Do not claim delivery is complete before the links have been returned.
-
 ## Required Final Status
 
 Use only evidence-backed statuses:
@@ -224,6 +235,12 @@ CONFIGURED_AND_VERIFIED
 CONFIGURED_PROTOCOL_ONLY
 BLOCKED_APPLICATION_NOT_READY
 BLOCKED_EKKO_INJECTION_UNAVAILABLE
+SELECTED_FOR_CURRENT_USER
+SKIPPED_NOT_VISIBLE_TO_CURRENT_USER
+BLOCKED_CURRENT_USER_APP_VISIBILITY_UNKNOWN
+BLOCKED_TICKET_NOT_CAPTURED
+BLOCKED_PROVIDER_AUTHORIZATION
+BLOCKED_PROVIDER_UNREACHABLE
 NAME_CONFLICT
 UNSUPPORTED_MCP_CONFIG
 SKIPPED_NOT_INSTALLED
@@ -240,8 +257,8 @@ Return:
 - MCP protocol result and tool count;
 - new-run visibility result;
 - application-readiness result;
-- the verified clickable application access link for the provider;
 - the separate MCP endpoint, clearly labeled as non-user-facing;
+- the current-user application-visibility result for every projected Provider, including Providers not installed;
 - exact blocked category without secrets.
 
 Do not report completion if only the scan ran. Do not report installation if only a file was edited without parse/read-back. Do not report usability if MCP protocol verification did not run.
@@ -249,10 +266,11 @@ Do not report completion if only the scan ran. Do not report installation if onl
 ## Non-Negotiable Safety Rules
 
 - Never hard-code the current provider count or a permanent provider-name list.
-- Configure only providers that exist in the current scan.
+- Configure only Providers that exist in the current scan, are selected by a reliable current-user-visible application result, and pass protocol preflight.
 - Keep providers independent; never aggregate their tools or traffic.
 - Preserve unrelated user MCP configuration.
 - Never print tickets, API keys, bearer tokens, credential-bearing URLs, or complete sensitive configuration files.
+- Never depend on host `lpk-manager` or human-facing application URLs for MCP installation.
 - Use only canonical URLs of the form `http://app.<package-id>.lzcx<endpoint>`.
 - Never add usernames, `.lzcapp`, `manager`, or an invented port to the URL.
 - JSON or TOML parse failure blocks that file write; it does not authorize replacement with a blank file.

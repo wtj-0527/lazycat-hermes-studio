@@ -56,12 +56,60 @@ class TicketLeaseTest(unittest.TestCase):
         self.upstream = ThreadingHTTPServer(("127.0.0.1", 0), UpstreamHandler)
         threading.Thread(target=self.upstream.serve_forever, daemon=True).start()
         self.port = free_port()
+        self.gateway_port = free_port()
         self.token = "lease-test-token"
         self.expected_log_fragments = []
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.gateway_seen = Path(self.tempdir.name) / "gateway-seen.json"
+        self.gateway_mode = Path(self.tempdir.name) / "gateway-mode.txt"
+        self.gateway_mode.write_text("ok", encoding="utf-8")
+        gateway_script = Path(self.tempdir.name) / "gateway.mjs"
+        gateway_script.write_text(r'''import http2 from 'node:http2'
+import { readFileSync, writeFileSync } from 'node:fs'
+
+const port = Number(process.argv[2])
+const seenFile = process.argv[3]
+const modeFile = process.argv[4]
+const field = (number, bytes) => Buffer.concat([Buffer.from([(number << 3) | 2, bytes.length]), bytes])
+const app = id => field(1, Buffer.from(id))
+const response = field(1, app('cloud.lazycat.app.browser'))
+const duplicate = field(1, app('cloud.lazycat.app.browser'))
+const second = field(1, app('cloud.lazycat.app.notes'))
+const message = Buffer.concat([response, duplicate, second])
+const frame = Buffer.concat([Buffer.from([0, 0, 0, 0, message.length]), message])
+const server = http2.createServer()
+server.on('stream', (stream, headers) => {
+  const chunks = []
+  stream.on('data', chunk => chunks.push(chunk))
+  stream.on('end', () => {
+    writeFileSync(seenFile, JSON.stringify({ headers, body: Buffer.concat(chunks).toString('hex') }))
+    const mode = readFileSync(modeFile, 'utf8').trim()
+    if (mode === 'grpc-error') {
+      stream.respond({ ':status': 200, 'content-type': 'application/grpc', 'grpc-status': '7' })
+      stream.end()
+    } else if (mode === 'missing-status') {
+      stream.respond({ ':status': 200, 'content-type': 'application/grpc' })
+      stream.end()
+    } else if (mode === 'malformed-frame') {
+      stream.respond({ ':status': 200, 'content-type': 'application/grpc', 'grpc-status': '0' })
+      stream.end(Buffer.from([0, 0, 0, 0, 8, 10]))
+    } else {
+      stream.respond({ ':status': 200, 'content-type': 'application/grpc', 'trailer': 'grpc-status' }, { waitForTrailers: true })
+      stream.on('wantTrailers', () => stream.sendTrailers({ 'grpc-status': '0' }))
+      stream.end(frame)
+    }
+  })
+})
+server.listen(port, '127.0.0.1')
+''', encoding="utf-8")
+        self.gateway_proc = subprocess.Popen(
+            ["node", str(gateway_script), str(self.gateway_port), str(self.gateway_seen), str(self.gateway_mode)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
         env = os.environ.copy()
         # Runtime NODE_OPTIONS/SOCKET_PATH from the installed wrapper must not
         # redirect this isolated TCP fixture into the production-style UDS.
-        for name in ("NODE_OPTIONS", "SOCKET_PATH", "SOCKET_GID", "CATALOG_FILE", "LAZYCAT_USER_ID"):
+        for name in ("NODE_OPTIONS", "SOCKET_PATH", "SOCKET_GID", "CATALOG_FILE", "LAZYCAT_USER_ID", "LZCAPP_API_GATEWAY_ADDRESS"):
             env.pop(name, None)
         env.update({
             "PORT": str(self.port),
@@ -69,6 +117,7 @@ class TicketLeaseTest(unittest.TestCase):
             "ALLOWED_HOST_SUFFIX": ".lzcx",
             "TEST_ALLOW_LOOPBACK": "1",
             "LAZYCAT_USER_ID": "user-a",
+            "LZCAPP_API_GATEWAY_ADDRESS": f"127.0.0.1:{self.gateway_port}",
         })
         self.proc = subprocess.Popen(
             ["node", str(SERVER)], env=env,
@@ -92,6 +141,16 @@ class TicketLeaseTest(unittest.TestCase):
             self.proc.kill()
         self.upstream.shutdown()
         self.upstream.server_close()
+        self.gateway_proc.terminate()
+        try:
+            self.gateway_proc.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            self.gateway_proc.kill()
+        if self.gateway_proc.stdout:
+            self.gateway_proc.stdout.close()
+        if self.gateway_proc.stderr:
+            self.gateway_proc.stderr.close()
+        self.tempdir.cleanup()
         output = (self.proc.stdout.read() if self.proc.stdout else "") + (self.proc.stderr.read() if self.proc.stderr else "")
         if self.proc.stdout:
             self.proc.stdout.close()
@@ -118,6 +177,51 @@ class TicketLeaseTest(unittest.TestCase):
             "X-LazyCat-Target": self.target,
             "Content-Type": "application/json",
         }, b'{"jsonrpc":"2.0"}')
+
+    def visible_apps(self):
+        return request(self.port, "GET", "/internal/visible-apps")
+
+    def test_visible_apps_requires_current_user_ticket(self):
+        self.assertEqual(self.visible_apps()[0], 428)
+
+    def test_visible_apps_returns_only_sorted_unique_package_ids(self):
+        self.capture()
+        status, headers, body = self.visible_apps()
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {
+            "package_ids": ["cloud.lazycat.app.browser", "cloud.lazycat.app.notes"]
+        })
+        self.assertEqual(headers.get("Content-Type"), "application/json; charset=utf-8")
+        deadline = time.time() + 3
+        while not self.gateway_seen.exists() and time.time() < deadline:
+            time.sleep(0.02)
+        seen = json.loads(self.gateway_seen.read_text(encoding="utf-8"))
+        self.assertEqual(seen["headers"][":path"], "/cloud.lazycat.apis.sys.PackageManager/QueryApplication")
+        self.assertEqual(seen["headers"]["x-hc-user-ticket"], "secret-ticket-A")
+        self.assertEqual(seen["headers"]["x-hc-user-id"], "user-a")
+        self.assertEqual(seen["body"], "0000000000")
+        self.assertNotIn("secret-ticket-A", body.decode())
+
+    def test_visible_apps_fails_closed_on_nonzero_grpc_status(self):
+        self.capture()
+        self.gateway_mode.write_text("grpc-error", encoding="utf-8")
+        status, _, body = self.visible_apps()
+        self.assertEqual(status, 502)
+        self.assertEqual(json.loads(body), {"error": "CURRENT_USER_APP_VISIBILITY_UNAVAILABLE"})
+
+    def test_visible_apps_fails_closed_when_grpc_status_is_missing(self):
+        self.capture()
+        self.gateway_mode.write_text("missing-status", encoding="utf-8")
+        status, _, body = self.visible_apps()
+        self.assertEqual(status, 502)
+        self.assertEqual(json.loads(body), {"error": "CURRENT_USER_APP_VISIBILITY_UNAVAILABLE"})
+
+    def test_visible_apps_fails_closed_on_malformed_grpc_frame(self):
+        self.capture()
+        self.gateway_mode.write_text("malformed-frame", encoding="utf-8")
+        status, _, body = self.visible_apps()
+        self.assertEqual(status, 502)
+        self.assertEqual(json.loads(body), {"error": "CURRENT_USER_APP_VISIBILITY_UNAVAILABLE"})
 
     def test_fails_closed_until_authenticated_request_captures_ticket(self):
         self.assertEqual(self.proxy()[0], 428)

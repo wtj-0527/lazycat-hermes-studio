@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import http from 'node:http'
+import http2 from 'node:http2'
 import { chmodSync, chownSync, readFileSync, rmSync } from 'node:fs'
 import { pipeline } from 'node:stream'
 
@@ -10,6 +11,7 @@ const socketGid = Number(process.env.SOCKET_GID || 101)
 const testLoopback = process.env.TEST_ALLOW_LOOPBACK === '1'
 const catalogFile = process.env.CATALOG_FILE || ''
 const lazycatUserId = process.env.LAZYCAT_USER_ID || ''
+const apiGatewayAddress = process.env.LZCAPP_API_GATEWAY_ADDRESS || ''
 let lease = null
 
 function send(res, status, body = '') {
@@ -18,6 +20,133 @@ function send(res, status, body = '') {
     'Content-Type': 'text/plain; charset=utf-8',
   })
   res.end(body)
+}
+
+function sendJson(res, status, value) {
+  const body = JSON.stringify(value)
+  res.writeHead(status, {
+    'Cache-Control': 'no-store',
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': Buffer.byteLength(body),
+  })
+  res.end(body)
+}
+
+function readVarint(buffer, offset) {
+  let value = 0
+  let shift = 0
+  while (offset < buffer.length && shift <= 49) {
+    const byte = buffer[offset++]
+    value += (byte & 0x7f) * (2 ** shift)
+    if ((byte & 0x80) === 0) return [value, offset]
+    shift += 7
+  }
+  throw new Error('invalid protobuf varint')
+}
+
+function protobufFields(buffer) {
+  const fields = []
+  let offset = 0
+  while (offset < buffer.length) {
+    let key
+    ;[key, offset] = readVarint(buffer, offset)
+    const number = Math.floor(key / 8)
+    const wire = key & 7
+    if (!number) throw new Error('invalid protobuf field')
+    if (wire === 0) {
+      let value
+      ;[value, offset] = readVarint(buffer, offset)
+      fields.push([number, wire, value])
+    } else if (wire === 1) {
+      if (offset + 8 > buffer.length) throw new Error('truncated protobuf field')
+      fields.push([number, wire, buffer.subarray(offset, offset + 8)])
+      offset += 8
+    } else if (wire === 2) {
+      let length
+      ;[length, offset] = readVarint(buffer, offset)
+      if (length < 0 || offset + length > buffer.length) throw new Error('truncated protobuf field')
+      fields.push([number, wire, buffer.subarray(offset, offset + length)])
+      offset += length
+    } else if (wire === 5) {
+      if (offset + 4 > buffer.length) throw new Error('truncated protobuf field')
+      fields.push([number, wire, buffer.subarray(offset, offset + 4)])
+      offset += 4
+    } else {
+      throw new Error('unsupported protobuf wire type')
+    }
+  }
+  return fields
+}
+
+function packageIdsFromGrpc(buffer) {
+  const ids = new Set()
+  let offset = 0
+  while (offset < buffer.length) {
+    if (offset + 5 > buffer.length) throw new Error('truncated gRPC frame')
+    const compressed = buffer[offset]
+    const length = buffer.readUInt32BE(offset + 1)
+    offset += 5
+    if (compressed !== 0 || offset + length > buffer.length) throw new Error('unsupported gRPC frame')
+    const message = buffer.subarray(offset, offset + length)
+    offset += length
+    for (const [number, wire, appInfo] of protobufFields(message)) {
+      if (number !== 1 || wire !== 2) continue
+      for (const [appNumber, appWire, appId] of protobufFields(appInfo)) {
+        if (appNumber !== 1 || appWire !== 2) continue
+        const value = appId.toString('utf8')
+        if (/^[A-Za-z0-9.-]+$/.test(value)) ids.add(value)
+      }
+    }
+  }
+  return [...ids].sort()
+}
+
+function queryVisiblePackageIds(ticket, userId) {
+  return new Promise((resolve, reject) => {
+    if (!apiGatewayAddress || !/^[A-Za-z0-9.-]+:\d+$/.test(apiGatewayAddress)) {
+      return reject(new Error('LazyCat API gateway unavailable'))
+    }
+    const client = http2.connect(`http://${apiGatewayAddress}`)
+    const chunks = []
+    let grpcStatus = null
+    let settled = false
+    const fail = error => {
+      if (settled) return
+      settled = true
+      client.close()
+      reject(error)
+    }
+    client.once('error', fail)
+    const stream = client.request({
+      ':method': 'POST',
+      ':path': '/cloud.lazycat.apis.sys.PackageManager/QueryApplication',
+      'content-type': 'application/grpc',
+      'te': 'trailers',
+      'x-hc-user-ticket': ticket,
+      'x-hc-user-id': userId,
+    })
+    stream.setTimeout(10000, () => stream.destroy(new Error('LazyCat API gateway timeout')))
+    stream.on('response', headers => {
+      if (headers[':status'] !== 200) return stream.destroy(new Error('LazyCat API gateway HTTP error'))
+      if (headers['grpc-status'] !== undefined) grpcStatus = String(headers['grpc-status'])
+    })
+    stream.on('trailers', headers => { grpcStatus = String(headers['grpc-status'] ?? '') })
+    stream.on('data', chunk => chunks.push(chunk))
+    stream.once('error', fail)
+    stream.once('end', () => {
+      if (settled) return
+      try {
+        if (grpcStatus !== '0') throw new Error('LazyCat API gateway gRPC error')
+        const ids = packageIdsFromGrpc(Buffer.concat(chunks))
+        settled = true
+        client.close()
+        resolve(ids)
+      } catch (error) {
+        fail(error)
+      }
+    })
+    stream.end(Buffer.alloc(5))
+  })
 }
 
 function validTarget(value) {
@@ -74,6 +203,16 @@ function capture(req, res) {
   res.end()
 }
 
+async function visibleApps(req, res) {
+  const ticket = currentTicket()
+  if (!ticket || !lease?.userId) return send(res, 428, 'Open Hermes Studio once to query current-user application visibility.')
+  try {
+    return sendJson(res, 200, { package_ids: await queryVisiblePackageIds(ticket, lease.userId) })
+  } catch {
+    return sendJson(res, 502, { error: 'CURRENT_USER_APP_VISIBILITY_UNAVAILABLE' })
+  }
+}
+
 function proxy(req, res) {
   const ticket = currentTicket()
   if (!ticket) return send(res, 428, 'Open Hermes Studio once to authorize LazyCat MCP access.')
@@ -107,6 +246,7 @@ function proxy(req, res) {
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') return send(res, 200, 'ok')
   if (req.method === 'POST' && req.url === '/internal/capture') return capture(req, res)
+  if (req.method === 'GET' && req.url === '/internal/visible-apps') return visibleApps(req, res)
   if (req.url === '/internal/proxy') return proxy(req, res)
   return send(res, 404)
 })
