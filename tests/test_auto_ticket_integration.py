@@ -34,7 +34,9 @@ class AutoTicketIntegrationContract(unittest.TestCase):
     def test_ticket_capture_is_bound_to_instance_user_and_provider_auth_is_isolated(self):
         lease = (ROOT / "content" / "lazycat-ticket-lease.mjs").read_text()
         self.assertIn("process.env.LAZYCAT_USER_ID", lease)
-        self.assertIn("userId !== lazycatUserId", lease)
+        self.assertIn("userId === lazycatUserId", lease)
+        self.assertIn("!state.userMatch", lease)
+        self.assertIn("capture.rejected", lease)
         self.assertNotIn("upstreamRes.statusCode === 401 || upstreamRes.statusCode === 403) lease = null", lease)
         self.assertIn("package_id=${provider.package_id} endpoint=${provider.endpoint} status=${upstreamRes.statusCode}", lease)
         self.assertNotIn("ticket=${", lease)

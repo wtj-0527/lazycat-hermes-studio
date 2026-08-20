@@ -158,6 +158,7 @@ server.listen(port, '127.0.0.1')
             self.proc.stderr.close()
         self.assertNotIn("secret-ticket-A", output)
         self.assertNotIn("secret-ticket-B", output)
+        self.assertNotIn("secret-user-B", output)
         for fragment in self.expected_log_fragments:
             self.assertIn(fragment, output)
 
@@ -263,14 +264,34 @@ server.listen(port, '127.0.0.1')
             "X-HC-USER-TICKET": "secret-ticket-A", "X-HC-SOURCE": "client"
         })
         self.assertEqual(status, 403)
+        self.expected_log_fragments.append(
+            "capture.rejected source_client=true ticket_present=true user_present=false configured_user_present=true user_match=false"
+        )
         status, _, _ = request(self.port, "POST", "/internal/capture", {
             "X-HC-USER-TICKET": "secret-ticket-A",
+            "X-HC-User-ID": "secret-user-B",
             "X-HC-SOURCE": "app:evil",
         })
         self.assertEqual(status, 403)
+        self.expected_log_fragments.append(
+            "capture.rejected source_client=false ticket_present=true user_present=true configured_user_present=true user_match=false"
+        )
+
+    def test_capture_logs_accept_and_renew_without_identity_values(self):
+        self.assertEqual(self.capture()[0], 204)
+        self.expected_log_fragments.append(
+            "capture.accepted source_client=true ticket_present=true user_present=true configured_user_present=true user_match=true"
+        )
+        self.assertEqual(self.capture(ticket="secret-ticket-B")[0], 204)
+        self.expected_log_fragments.append(
+            "capture.renewed source_client=true ticket_present=true user_present=true configured_user_present=true user_match=true"
+        )
 
     def test_capture_rejects_user_not_bound_to_deployed_instance(self):
-        self.assertEqual(self.capture(ticket="secret-ticket-B", user="user-b")[0], 403)
+        self.assertEqual(self.capture(ticket="secret-ticket-B", user="secret-user-B")[0], 403)
+        self.expected_log_fragments.append(
+            "capture.rejected source_client=true ticket_present=true user_present=true configured_user_present=true user_match=false"
+        )
         self.assertEqual(self.proxy()[0], 428)
 
     def test_proxy_rejects_arbitrary_targets(self):
