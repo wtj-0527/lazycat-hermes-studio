@@ -22,6 +22,8 @@ services:
   lazycat-ticket-lease:
     image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.43-pr2584-2205330a-202608162237
     entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
+    # LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime into this
+    # application service. Never construct or override the gateway address.
     environment:
       - SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock
       - SOCKET_GID=101
