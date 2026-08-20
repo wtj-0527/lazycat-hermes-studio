@@ -29,7 +29,6 @@ services:
       - SOCKET_GID=101
       - LEASE_TTL_MS=900000
       - CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json
-      - LAZYCAT_USER_ID={{ .S.DeployUID }}
     binds:
       - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 

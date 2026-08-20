@@ -10,7 +10,6 @@ const socketPath = process.env.SOCKET_PATH || ''
 const socketGid = Number(process.env.SOCKET_GID || 101)
 const testLoopback = process.env.TEST_ALLOW_LOOPBACK === '1'
 const catalogFile = process.env.CATALOG_FILE || ''
-const lazycatUserId = process.env.LAZYCAT_USER_ID || ''
 const apiGatewayAddress = process.env.LZCAPP_API_GATEWAY_ADDRESS || ''
 let lease = null
 
@@ -194,9 +193,7 @@ function captureState(source, ticket, userId) {
   const sourceClient = source === 'client'
   const ticketPresent = typeof ticket === 'string' && ticket.length > 0
   const userPresent = typeof userId === 'string' && userId.length > 0
-  const configuredUserPresent = lazycatUserId.length > 0
-  const userMatch = userPresent && configuredUserPresent && userId === lazycatUserId
-  return { sourceClient, ticketPresent, userPresent, configuredUserPresent, userMatch }
+  return { sourceClient, ticketPresent, userPresent }
 }
 
 function logCapture(event, state) {
@@ -204,9 +201,7 @@ function logCapture(event, state) {
     `[lazycat-ticket-lease] ${event}` +
     ` source_client=${state.sourceClient}` +
     ` ticket_present=${state.ticketPresent}` +
-    ` user_present=${state.userPresent}` +
-    ` configured_user_present=${state.configuredUserPresent}` +
-    ` user_match=${state.userMatch}`
+    ` user_present=${state.userPresent}`
   )
 }
 
@@ -215,7 +210,7 @@ function capture(req, res) {
   const ticket = req.headers['x-hc-user-ticket']
   const userId = req.headers['x-hc-user-id']
   const state = captureState(source, ticket, userId)
-  if (!state.sourceClient || !state.ticketPresent || !state.userPresent || !state.configuredUserPresent || !state.userMatch) {
+  if (!state.sourceClient || !state.ticketPresent || !state.userPresent) {
     logCapture('capture.rejected', state)
     return send(res, 403)
   }
