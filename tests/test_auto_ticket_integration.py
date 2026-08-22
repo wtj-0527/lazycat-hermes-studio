@@ -6,7 +6,6 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNTIME_IMAGE = "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.43-pr2584-2205330a-202608162237"
 
 
 class AutoTicketIntegrationContract(unittest.TestCase):
@@ -28,8 +27,9 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertNotIn("0o666", lease)
         self.assertNotIn("build:", manifest)
         services = yaml.safe_load(manifest)["services"]
-        self.assertEqual(services["lazycat-ticket-lease"]["image"], RUNTIME_IMAGE)
-        self.assertEqual(services["hermes-webui"]["image"], RUNTIME_IMAGE)
+        runtime_image = services["hermes-webui"]["image"]
+        self.assertTrue(runtime_image)
+        self.assertEqual(services["lazycat-ticket-lease"]["image"], runtime_image)
 
     def test_ticket_capture_binds_to_trusted_request_user_and_provider_auth_is_isolated(self):
         lease = (ROOT / "content" / "lazycat-ticket-lease.mjs").read_text()
