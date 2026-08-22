@@ -1,3 +1,14 @@
+# 2026.08.22.1548（正式发布）
+
+## Hermes Studio 0.6.45
+
+- 运行镜像升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.45-main-ef023b88-202608221548`，构建自 `EKKOLearnAI/hermes-studio` `main` 的 `ef023b88e86f5f5e83bce95ddcf0d0cfe4408f33`。
+- 包含已合并的 #2642：浏览器本地持久化的“显示最近会话”开关，关闭时隐藏完整 Recent 分组且不改动会话分类、置顶、归档或数据。
+- 包含已合并的 #2644：Group Chat Agent 独立可搜索预设选择/管理弹窗、显式应用/取消、不可用原因、CRUD 与凭据隔离的 snapshot copy。
+- 本正式 LPK 不包含任何未合并 PR；未执行安装、部署或现有服务重启。
+
+---
+
 # 2026.08.17.1153（测试候选）
 
 ## LazyCat MCP Provider 授权隔离
