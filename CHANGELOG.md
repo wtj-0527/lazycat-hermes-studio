@@ -1,3 +1,14 @@
+# 2026.08.22.1556（正式发布）
+
+## Hermes Studio v0.6.45
+
+- 运行镜像升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.45-main-ef023b88-202608221556`。
+- 应用源码固定为 `EKKOLearnAI/hermes-studio/main@ef023b88e86f5f5e83bce95ddcf0d0cfe4408f33`（tree `47ad373f0192f338b5614f9fa6cbdfd1fe5e0105`）。
+- 包含已合并的 #2642「显示最近会话」设置与 #2644 Group Chat Agent 预设选择、应用和管理能力。
+- 本次仅更新包装版本、运行镜像引用及发布说明；不安装、不部署、不重启现有服务。
+
+---
+
 # 2026.08.17.1153（测试候选）
 
 ## LazyCat MCP Provider 授权隔离
