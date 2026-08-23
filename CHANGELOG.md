@@ -1,3 +1,27 @@
+# 2026.08.23.1456（测试候选）
+
+## GLM-5.3 推理强度兼容与档位生效修复
+
+- 重新生成独立测试镜像 Tag，并在成品 LPK 中核验 `lazycat-ticket-lease` 与 `hermes-webui` 两处均引用：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-5c047d4-202608231456`。
+- 镜像 digest：`sha256:848cf77f53edd08fb72b4d83c1eb92e56b869507da46b0062f6b42604398c642`，构建内容对应 Hermes Studio PR #2706 精确 head `5c047d4`。
+- GLM-5.3 推理强度统一映射为 `low / high / max`，火山及 custom OpenAI-compatible 路径发送顶层 `reasoning_effort`。
+- 修复主对话旧 `medium` 覆盖新档位的竞态，并统一 delegated subagent 默认档位。
+- `2026.08.23.1412` 不再用于验收；本候选未安装、未合并、未创建 Tag 或正式 Release。
+
+---
+
+# 2026.08.23.1412（撤回：重新生成镜像引用候选）
+
+## GLM-5.3 推理强度兼容与档位生效修复
+
+- 测试镜像构建自 Hermes Studio PR #2706 的精确 head `5c047d4`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-5c047d4-202608231412`。
+- GLM-5.3 推理强度统一映射为服务端允许的 `low / high / max` 三档；`default` 继续表示省略 override。
+- 火山及 custom OpenAI-compatible chat-completions 路径会发送顶层 `reasoning_effort`，主对话和 delegated subagent 使用相同映射。
+- 修复主对话档位写入期间被旧会话快照覆盖、实际仍发送 `medium` 的竞态；子代理默认档位保存与读取保持一致。
+- 本候选仅供验收；Studio PR 和包装 PR 均未合并，未创建 Tag 或正式 Release，未安装或部署。
+
+---
+
 # 2026.08.22.1548（正式发布）
 
 ## Hermes Studio 0.6.45
