@@ -1,3 +1,15 @@
+# 2026.08.23.1412（测试候选）
+
+## GLM-5.3 推理强度兼容与档位生效修复
+
+- 测试镜像构建自 Hermes Studio PR #2706 的精确 head `5c047d4`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-5c047d4-202608231412`。
+- GLM-5.3 推理强度统一映射为服务端允许的 `low / high / max` 三档；`default` 继续表示省略 override。
+- 火山及 custom OpenAI-compatible chat-completions 路径会发送顶层 `reasoning_effort`，主对话和 delegated subagent 使用相同映射。
+- 修复主对话档位写入期间被旧会话快照覆盖、实际仍发送 `medium` 的竞态；子代理默认档位保存与读取保持一致。
+- 本候选仅供验收；Studio PR 和包装 PR 均未合并，未创建 Tag 或正式 Release，未安装或部署。
+
+---
+
 # 2026.08.22.1548（正式发布）
 
 ## Hermes Studio 0.6.45
