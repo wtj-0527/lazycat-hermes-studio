@@ -1,3 +1,15 @@
+# 2026.08.23.1528（测试候选）
+
+## 补齐 Coding Agent Node 请求链的 GLM-5.3 推理强度映射
+
+- 撤回 `2026.08.23.1456` 的验收资格：Axonhub 实际请求证明 Coding Agent Node adapter 仍原样发送 `none` / `minimal`，导致 GLM-5.3 返回 400。
+- 新镜像严格构建自 Hermes Studio PR #2706 精确 head `6f29dfe6`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-6f29dfe6-202608231528`。
+- 镜像 digest：`sha256:8e9696515f8f599a2f14bc8af52f795c73fb634266964fdb461b5f8ac3514eb2`；`lazycat-ticket-lease` 与 `hermes-webui` 两处必须同时引用该镜像。
+- OpenAI Responses 与 Anthropic-to-OpenAI 两条 Coding Agent Node adapter 最终 payload 均执行 GLM-5.3 映射：`none/minimal/low → low`、`medium/high → high`、`xhigh/max → max`；非 GLM 模型保持原值。
+- 本候选仅供验收；不创建 Tag 或正式 Release，不安装或部署，合并仍需用户确认。
+
+---
+
 # 2026.08.23.1456（测试候选）
 
 ## GLM-5.3 推理强度兼容与档位生效修复
