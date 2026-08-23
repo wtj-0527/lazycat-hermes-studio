@@ -1,3 +1,16 @@
+# 2026.08.23.1613（测试候选）
+
+## 补齐原生 Responses 与 Anthropic Messages 请求链
+
+- 撤回 `2026.08.23.1528` 的验收资格：该候选已覆盖协议转换 adapter，但尚未覆盖原生 `/v1/responses` 与 `/v1/messages` 透传分支。
+- 新镜像严格构建自 Hermes Studio PR #2706 精确 head `19d9c3b0`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-19d9c3b0-202608231613`。
+- 镜像 digest：`sha256:bce05ef30c2c0d52080d4c4a136f29b4c7bc4b55e66012d5e7f42180a409fbb5`；`lazycat-ticket-lease` 与 `hermes-webui` 两处同时引用该镜像。
+- 原生 OpenAI Responses 的流式与非流式请求会在最终出站 body 中映射 `reasoning.effort`；原生 Anthropic Messages 的流式与非流式请求会为 GLM-5.3 映射顶层 `reasoning_effort`。
+- 非 GLM 的原生 Anthropic Messages 请求不注入该扩展字段；其他已修复的 Chat Completions、协议转换及 Python Bridge 路径保持不变。
+- 本候选仅供用户安装验收；不创建 Tag 或正式 Release，不擅自安装、部署或合并。
+
+---
+
 # 2026.08.23.1528（测试候选）
 
 ## 补齐 Coding Agent Node 请求链的 GLM-5.3 推理强度映射
