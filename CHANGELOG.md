@@ -1,4 +1,17 @@
-# 2026.08.23.1613（测试候选）
+# 2026.08.23.1651（测试候选）
+
+## 修正 Anthropic Messages 推理强度字段
+
+- 撤回 `2026.08.23.1613`：Axonhub 的 Anthropic Messages inbound parser 不读取顶层 `reasoning_effort`，因此请求虽成功到达，但页面不会显示推理强度。
+- 新镜像严格构建自 Hermes Studio PR #2706 精确 head `cc2a8eda`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-cc2a8eda-202608231651`。
+- 镜像 digest：`sha256:45ffd67f7a45e94f3c875630c6eb8693fbbd24f5ce48954b6b5a2543aa712a12`；`lazycat-ticket-lease` 与 `hermes-webui` 两处同时引用该镜像。
+- GLM-5.3 的 Responses → Anthropic Messages 与原生 `/v1/messages`（流式、非流式）最终请求均发送 `output_config.effort: low|high|max`，不再发送会被 Axonhub 忽略的顶层字段。
+- 6 项针对性断言完成 RED → GREEN；Studio focused suite 137 项通过，Axonhub 自带 `TestOutputConfig_Inbound` parser 测试通过。
+- 本候选仅供用户安装后进行真实 Axonhub wire 验收；不创建 Tag 或正式 Release，不擅自安装、部署或合并。
+
+---
+
+# 2026.08.23.1613（撤回）
 
 ## 补齐原生 Responses 与 Anthropic Messages 请求链
 
@@ -11,7 +24,7 @@
 
 ---
 
-# 2026.08.23.1528（测试候选）
+# 2026.08.23.1528（撤回）
 
 ## 补齐 Coding Agent Node 请求链的 GLM-5.3 推理强度映射
 
@@ -23,7 +36,7 @@
 
 ---
 
-# 2026.08.23.1456（测试候选）
+# 2026.08.23.1456（撤回）
 
 ## GLM-5.3 推理强度兼容与档位生效修复
 
