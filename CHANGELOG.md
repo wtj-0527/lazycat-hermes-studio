@@ -1,4 +1,42 @@
-# 2026.08.23.1456（测试候选）
+# 2026.08.23.1651（测试候选）
+
+## 修正 Anthropic Messages 推理强度字段
+
+- 撤回 `2026.08.23.1613`：Axonhub 的 Anthropic Messages inbound parser 不读取顶层 `reasoning_effort`，因此请求虽成功到达，但页面不会显示推理强度。
+- 新镜像严格构建自 Hermes Studio PR #2706 精确 head `cc2a8eda`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-cc2a8eda-202608231651`。
+- 镜像 digest：`sha256:45ffd67f7a45e94f3c875630c6eb8693fbbd24f5ce48954b6b5a2543aa712a12`；`lazycat-ticket-lease` 与 `hermes-webui` 两处同时引用该镜像。
+- GLM-5.3 的 Responses → Anthropic Messages 与原生 `/v1/messages`（流式、非流式）最终请求均发送 `output_config.effort: low|high|max`，不再发送会被 Axonhub 忽略的顶层字段。
+- 6 项针对性断言完成 RED → GREEN；Studio focused suite 137 项通过，Axonhub 自带 `TestOutputConfig_Inbound` parser 测试通过。
+- 本候选仅供用户安装后进行真实 Axonhub wire 验收；不创建 Tag 或正式 Release，不擅自安装、部署或合并。
+
+---
+
+# 2026.08.23.1613（撤回）
+
+## 补齐原生 Responses 与 Anthropic Messages 请求链
+
+- 撤回 `2026.08.23.1528` 的验收资格：该候选已覆盖协议转换 adapter，但尚未覆盖原生 `/v1/responses` 与 `/v1/messages` 透传分支。
+- 新镜像严格构建自 Hermes Studio PR #2706 精确 head `19d9c3b0`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-19d9c3b0-202608231613`。
+- 镜像 digest：`sha256:bce05ef30c2c0d52080d4c4a136f29b4c7bc4b55e66012d5e7f42180a409fbb5`；`lazycat-ticket-lease` 与 `hermes-webui` 两处同时引用该镜像。
+- 原生 OpenAI Responses 的流式与非流式请求会在最终出站 body 中映射 `reasoning.effort`；原生 Anthropic Messages 的流式与非流式请求会为 GLM-5.3 映射顶层 `reasoning_effort`。
+- 非 GLM 的原生 Anthropic Messages 请求不注入该扩展字段；其他已修复的 Chat Completions、协议转换及 Python Bridge 路径保持不变。
+- 本候选仅供用户安装验收；不创建 Tag 或正式 Release，不擅自安装、部署或合并。
+
+---
+
+# 2026.08.23.1528（撤回）
+
+## 补齐 Coding Agent Node 请求链的 GLM-5.3 推理强度映射
+
+- 撤回 `2026.08.23.1456` 的验收资格：Axonhub 实际请求证明 Coding Agent Node adapter 仍原样发送 `none` / `minimal`，导致 GLM-5.3 返回 400。
+- 新镜像严格构建自 Hermes Studio PR #2706 精确 head `6f29dfe6`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.46-pr2706-6f29dfe6-202608231528`。
+- 镜像 digest：`sha256:8e9696515f8f599a2f14bc8af52f795c73fb634266964fdb461b5f8ac3514eb2`；`lazycat-ticket-lease` 与 `hermes-webui` 两处必须同时引用该镜像。
+- OpenAI Responses 与 Anthropic-to-OpenAI 两条 Coding Agent Node adapter 最终 payload 均执行 GLM-5.3 映射：`none/minimal/low → low`、`medium/high → high`、`xhigh/max → max`；非 GLM 模型保持原值。
+- 本候选仅供验收；不创建 Tag 或正式 Release，不安装或部署，合并仍需用户确认。
+
+---
+
+# 2026.08.23.1456（撤回）
 
 ## GLM-5.3 推理强度兼容与档位生效修复
 
