@@ -1,3 +1,16 @@
+# 2026.08.25.0859（正式发布）
+
+## Hermes Studio 0.6.47
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main` `8a194dc71234fabd4a3581ec4d2891ebe55983c3` 构建，不包含未合并 PR。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-main-8a194dc7-202608250859`。
+- 镜像 digest：`sha256:bf5be2ce5cb956981e184357c052af5dc716cb0c388c4e8a5443b8502f78c58c`。
+- 同步上游 0.6.46–0.6.47：App Chat resume cache、Claude/Codex 多 system message 合并、Social Message push、App Relay 路由、图像生成/编辑模型选择、可配置上传上限，以及 thinking elapsed time 跨页面保持等更新。
+- 上游 `main` 已通过 `9844d305` 回滚 #2706 的 GLM-5.3 reasoning effort 改动；本 LPK 忠实跟随最新 `main`，不额外携带此前测试候选补丁。
+- 构建与发布仅生成镜像和 LPK；未安装、未部署、未重启现有服务。
+
+---
+
 # 2026.08.23.1651（测试候选）
 
 ## 修正 Anthropic Messages 推理强度字段
