@@ -1,3 +1,15 @@
+# 2026.08.26.1612（测试候选）
+
+## 修复从“最近”选择会话时联动展开真实分类
+
+- 测试镜像严格构建自 Hermes Studio PR #2742 精确 head `16538e089b71a34ce71734c1959c00ff734060cb`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-pr2742-16538e08-202608261605`。
+- 镜像 digest：`sha256:234dfc38866d0269bd116b46a37b6168f5c79c1aebab362c9394d8d080d69aad`；`lazycat-ticket-lease` 与 `hermes-webui` 两处同步引用该镜像。
+- 从“最近”快捷分组选择会话时，不再自动展开其真实分类，也不会覆盖用户保存的折叠状态。
+- 直接 URL、刷新及普通分类内导航仍保留自动显示当前会话真实分类的原有行为。
+- 本候选仅供用户安装验收；上游 PR 与包装 PR 均不合并，不创建 Tag 或正式 Release，不安装或部署。
+
+---
+
 # 2026.08.25.0859（正式发布）
 
 ## Hermes Studio 0.6.47
