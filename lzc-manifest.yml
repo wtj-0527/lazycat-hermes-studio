@@ -96,14 +96,16 @@ services:
         INSTANCE_ID="${LAZYCAT_APP_DOMAIN:-${LAZYCAT_APP_DEPLOY_UID:-unknown}}"
         REQUEST_HASH=$(printf '%s' "$REQUEST_ID" | md5sum | cut -c1-16)
         UPGRADE_QUEUE_NAME="hermes-studio-rootfs-wait-$REQUEST_HASH"
-        LOCK_IMAGE=$(docker inspect --format '{{.Config.Image}}' "$HOSTNAME" 2>/dev/null)
+        LOCK_IMAGE=$(docker inspect "$HOSTNAME" 2>/dev/null |
+          awk -F'"' '$2 == "Image" { print $4; exit }')
         if [ -z "$LOCK_IMAGE" ]; then
           echo "[setup] unable to identify current image; continuing with idle I/O priority"
           UPGRADE_QUEUE_NAME=
           return 0
         fi
         docker rm -f "$UPGRADE_QUEUE_NAME" >/dev/null 2>&1 || true
-        LOCK_OWNER=$(docker inspect --format "{{index .Config.Labels \"community.lazycat.app.hermes.upgrade.request\"}}" "$UPGRADE_LOCK_NAME" 2>/dev/null || true)
+        LOCK_OWNER=$(docker inspect "$UPGRADE_LOCK_NAME" 2>/dev/null |
+          awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }' || true)
         if [ "$LOCK_OWNER" = "$REQUEST_ID" ]; then
           docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
         fi
@@ -121,8 +123,15 @@ services:
         UPGRADE_LOCK_BACKEND=docker
         WAIT_COUNT=0
         while :; do
-          FIRST_WAITING=$(docker ps -a --filter "label=$UPGRADE_QUEUE_LABEL=true" \
-            --format '{{.CreatedAt}} {{.Names}}' 2>/dev/null | sort | head -n1 | awk '{print $NF}')
+          FIRST_WAITING=$(
+            for WAITING_ID in $(docker ps -aq --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
+              WAITING_CREATED=$(docker inspect "$WAITING_ID" 2>/dev/null |
+                awk -F'"' '$2 == "Created" { print $4; exit }')
+              WAITING_NAME=$(docker inspect "$WAITING_ID" 2>/dev/null |
+                awk -F'"' '$2 == "Name" { sub("^/", "", $4); print $4; exit }')
+              printf '%s %s\n' "$WAITING_CREATED" "$WAITING_NAME"
+            done | sort | head -n1 | awk '{print $NF}'
+          )
           if [ "$FIRST_WAITING" = "$UPGRADE_QUEUE_NAME" ]; then
             if docker run -d --rm --name "$UPGRADE_LOCK_NAME" \
               --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
