@@ -1,3 +1,17 @@
+# 2026.08.29.0235（正式发布）
+
+## 基于最新 main 并携带 PR #2758 重新发布
+
+- 上游基线严格冻结为 `EKKOLearnAI/hermes-studio` `main@c96ae3a559334ae01c0feceb5c8f1ef83a773fa8`。
+- 携带 Hermes Studio PR #2758 精确 head `eadb416c85daa14d5a2f32ed09e9428518c9ea4e`；该 PR 在当前 main 上解决冲突后的集成 tree 为 `8fb5c49e740f96cd8030b0c06af67bc6171c2445`。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-main-c96ae3a5-pr2758-eadb416c-202608290235`。
+- 远端镜像 digest：`sha256:934aff3aaa3fc9948632e0b80d75b84108ee5e5072e11acb468e992366d5e646`；回拉后 labels、Node 24.15.0、node-pty、Sharp、`0.0.0.0:8648`、`/livez` 与零重启验收通过。
+- 保留 `HERMES_MAX_UPLOAD_SIZE=524288000`，普通附件上传上限继续为 500 MiB。
+- 源码 focused tests、harness、production build 与 Sharp runtime 通过；全量 coverage 的候选新增失败为 0，两项偶发 E2E 在候选与 exact main 聚焦 A/B 均通过。
+- 本次发布只构建镜像和 LPK；不安装、不部署、不重启现有实例。
+
+---
+
 # 2026.08.29.0019（合并候选）
 
 ## 合并 F5 后分类折叠修复并保留 500 MiB 上传配置
