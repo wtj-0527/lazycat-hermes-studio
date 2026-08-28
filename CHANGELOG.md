@@ -1,3 +1,14 @@
+# 2026.08.28.1037（测试候选）
+
+## 全端统一显示启动流光动画
+
+- 测试镜像严格构建自 Hermes Studio PR #2767 精确 head `2d797bb9991cb5e6cedd8569a3f40974c2fcbf59`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-pr2767-2d797bb9-202608281037`。
+- 镜像为 `linux/amd64` Docker v2 manifest，digest：`sha256:b676162c46c0aec14d986ed68a989421a9756d5948e09e9d65b28a23d2a2146c`；`lazycat-ticket-lease` 与 `hermes-webui` 两处同步引用。
+- Hermes HTML 启动占位页至少保留一轮 1.8 秒流光；加载较慢时不会额外延时，使 Android、iPad/iOS、桌面和浏览器宿主在明暗主题下都能看到完整动画。
+- 本候选用于 iPad 安装验收；上游 PR 与包装 PR 均不合并，不创建 Tag 或正式 Release。
+
+---
+
 # 2026.08.26.1612（测试候选）
 
 ## 修复从“最近”选择会话时联动展开真实分类
