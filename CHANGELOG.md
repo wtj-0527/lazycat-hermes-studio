@@ -1,3 +1,15 @@
+# 2026.08.29.0007（正式发布）
+
+## 将附件上传上限提高到 500 MiB
+
+- 在 `hermes-webui` 服务中显式设置 `HERMES_MAX_UPLOAD_SIZE=524288000`，将普通附件上传上限从默认 50 MiB 提高到 500 MiB。
+- nginx 包装层继续使用 `client_max_body_size 0`，不会先于 Hermes Studio 拒绝大文件请求。
+- 仅调整 LazyCat 包装配置、版本和说明；不修改 Hermes Studio 应用源码，并保留包装 `main` 当前固定的 runtime image。
+- 构建和发布新的 LPK；不安装、不部署、不重启现有实例。
+- 跟踪：#109。
+
+---
+
 # 2026.08.26.1612（测试候选）
 
 ## 修复从“最近”选择会话时联动展开真实分类

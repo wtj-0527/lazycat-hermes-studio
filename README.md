@@ -19,6 +19,9 @@ Hermes AI 智能体 Web 管理界面 — 全 rootfs 持久化
 
 下载最新 LPK，通过懒猫 Web UI 安装。
 
+当前包装将 Hermes Studio 普通附件上传上限配置为 500 MiB
+（`HERMES_MAX_UPLOAD_SIZE=524288000`）。nginx 包装层不额外限制请求体大小。
+
 说明：当前 `/home/agent` 的主持久化路径是 `document.private` 对应的
 `/lzcapp/documents/{{ .S.DeployUID }}`。`setup_script` 里保留的
 `/lzcapp/var/home -> /home/agent` 迁移逻辑仅用于兼容旧版本历史数据，
