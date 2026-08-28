@@ -23,3 +23,11 @@ def test_rootfs_snapshot_does_not_rescan_destination_for_progress():
         "# --- Sync container-generated files", 1
     )[0]
     assert "du -sh" not in snapshot
+
+
+def test_manifest_only_updates_do_not_rebuild_the_rootfs_base():
+    manifest = MANIFEST.read_text()
+    assert 'CURRENT_IMAGE=$(awk' in manifest
+    assert '"$ROOTFS/.image-ref"' in manifest
+    assert "migrated rootfs image fingerprint without re-snapshotting" in manifest
+    assert 'elif [ "$CURRENT_IMAGE" != "$STORED_IMAGE" ]; then' in manifest

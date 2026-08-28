@@ -154,16 +154,31 @@ services:
       }
 
 
-      # --- Image fingerprint: overlay lowerdir (works for latest tag too) ---
-      CURRENT_ID=$(md5sum /lzcapp/run/package.yml /lzcapp/run/manifest.yml 2>/dev/null | md5sum | cut -d" " -f1 || echo first)
-      STORED_ID=$(cat "$ROOTFS/.image-id" 2>/dev/null)
+      # --- Image fingerprint: only image changes require a new base snapshot ---
+      CURRENT_IMAGE=$(awk '
+        /^    hermes-webui:/ { service=1; next }
+        service && /^    [^ ]/ { service=0 }
+        service && /^[[:space:]]+image:/ {
+          sub(/^[[:space:]]+image:[[:space:]]*/, "")
+          print
+          exit
+        }
+      ' /lzcapp/run/manifest.yml)
+      CURRENT_ID=$(printf '%s' "$CURRENT_IMAGE" | md5sum | cut -d" " -f1)
+      STORED_IMAGE=$(cat "$ROOTFS/.image-ref" 2>/dev/null)
       # --- First boot or image update: snapshot base ---
       NEED_SNAPSHOT=0
-      if [ ! -f "$ROOTFS/.image-id" ]; then
+      if [ -z "$STORED_IMAGE" ] && [ -f "$ROOTFS/.image-id" ] && [ -d "$BASE/usr" ]; then
+        # Legacy releases fingerprinted the complete manifest. This release uses
+        # the unchanged 2026.08.29.0235 image, so migrate without copying rootfs.
+        echo "$CURRENT_IMAGE" > "$ROOTFS/.image-ref"
+        STORED_IMAGE=$CURRENT_IMAGE
+        echo "[setup] migrated rootfs image fingerprint without re-snapshotting"
+      elif [ -z "$STORED_IMAGE" ]; then
         echo "[setup] first boot: creating base snapshot..."
         NEED_SNAPSHOT=1
-      elif [ "$CURRENT_ID" != "$STORED_ID" ]; then
-        echo "[setup] image update detected ($STORED_ID -> $CURRENT_ID)"
+      elif [ "$CURRENT_IMAGE" != "$STORED_IMAGE" ]; then
+        echo "[setup] image update detected"
         echo "[setup] re-snapshotting base (user packages preserved in upper)..."
         NEED_SNAPSHOT=1
       fi
@@ -184,6 +199,7 @@ services:
           fi
         done
         echo "$CURRENT_ID" > "$ROOTFS/.image-id"
+        echo "$CURRENT_IMAGE" > "$ROOTFS/.image-ref"
         echo "[setup] base snapshot done"
         release_upgrade_slot
         trap - EXIT INT TERM
