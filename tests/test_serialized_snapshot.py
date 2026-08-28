@@ -6,7 +6,10 @@ MANIFEST = Path(__file__).resolve().parents[1] / "lzc-manifest.yml"
 
 def test_rootfs_snapshot_uses_watchcat_fifo_and_idle_io():
     manifest = MANIFEST.read_text()
-    assert "/api/v1/upgrade-coordinator" in manifest
+    assert "hermes-studio-rootfs-upgrade-lock" in manifest
+    assert "community.lazycat.app.hermes.upgrade.queue" in manifest
+    assert "docker run -d --rm --name" in manifest
+    assert "FIRST_WAITING" in manifest
     assert "acquire_upgrade_slot" in manifest
     assert "release_upgrade_slot" in manifest
     assert "ionice -c 3 nice -n 15" in manifest

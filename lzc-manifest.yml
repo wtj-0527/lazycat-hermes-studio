@@ -74,9 +74,10 @@ services:
       BASE=$ROOTFS/base
       UPPER=$ROOTFS/upper
       DIRS="etc opt root srv usr var"
-      WATCHCAT_COORDINATOR=${WATCHCAT_COORDINATOR:-http://app.community.lazycat.app.watchcat.lzcapp/api/v1/upgrade-coordinator}
-      LEASE_TOKEN=
-      LEASE_HEARTBEAT_PID=
+      UPGRADE_LOCK_NAME=hermes-studio-rootfs-upgrade-lock
+      UPGRADE_QUEUE_LABEL=community.lazycat.app.hermes.upgrade.queue
+      UPGRADE_LOCK_BACKEND=
+      UPGRADE_QUEUE_NAME=
 
       run_idle() {
         if command -v ionice >/dev/null 2>&1; then
@@ -87,49 +88,69 @@ services:
       }
 
       acquire_upgrade_slot() {
-        if ! curl -fsS --connect-timeout 2 --max-time 5 "$WATCHCAT_COORDINATOR" >/dev/null 2>&1; then
-          echo "[setup] WatchCat coordinator unavailable; continuing with idle I/O priority"
+        if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+          echo "[setup] host Docker coordinator unavailable; continuing with idle I/O priority"
           return 0
         fi
         REQUEST_ID="${LAZYCAT_APP_DEPLOY_UID:-unknown}-${CURRENT_ID}"
         INSTANCE_ID="${LAZYCAT_APP_DOMAIN:-${LAZYCAT_APP_DEPLOY_UID:-unknown}}"
+        REQUEST_HASH=$(printf '%s' "$REQUEST_ID" | md5sum | cut -c1-16)
+        UPGRADE_QUEUE_NAME="hermes-studio-rootfs-wait-$REQUEST_HASH"
+        LOCK_IMAGE=$(docker inspect --format '{{.Config.Image}}' "$HOSTNAME" 2>/dev/null)
+        if [ -z "$LOCK_IMAGE" ]; then
+          echo "[setup] unable to identify current image; continuing with idle I/O priority"
+          UPGRADE_QUEUE_NAME=
+          return 0
+        fi
+        docker rm -f "$UPGRADE_QUEUE_NAME" >/dev/null 2>&1 || true
+        LOCK_OWNER=$(docker inspect --format "{{index .Config.Labels \"community.lazycat.app.hermes.upgrade.request\"}}" "$UPGRADE_LOCK_NAME" 2>/dev/null || true)
+        if [ "$LOCK_OWNER" = "$REQUEST_ID" ]; then
+          docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
+        fi
+        if ! docker run -d --rm --name "$UPGRADE_QUEUE_NAME" \
+          --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+          --label "$UPGRADE_QUEUE_LABEL=true" \
+          --label "community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" \
+          --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
+          --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
+          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' >/dev/null; then
+          echo "[setup] unable to register upgrade queue entry; continuing with idle I/O priority"
+          UPGRADE_QUEUE_NAME=
+          return 0
+        fi
+        UPGRADE_LOCK_BACKEND=docker
+        WAIT_COUNT=0
         while :; do
-          RESPONSE=$(curl -fsS --connect-timeout 3 --max-time 10 \
-            -H 'Content-Type: application/json' \
-            -d "{\"requestId\":\"$REQUEST_ID\",\"appId\":\"${LAZYCAT_APP_ID:-community.lazycat.app.hermes-studio}\",\"instanceId\":\"$INSTANCE_ID\",\"userId\":\"${LAZYCAT_USER_ID:-}\"}" \
-            "$WATCHCAT_COORDINATOR/acquire" 2>/dev/null || true)
-          LEASE_TOKEN=$(printf '%s' "$RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
-          if [ -n "$LEASE_TOKEN" ]; then
-            echo "[setup] acquired WatchCat upgrade slot for $INSTANCE_ID"
-            break
+          FIRST_WAITING=$(docker ps -a --filter "label=$UPGRADE_QUEUE_LABEL=true" \
+            --format '{{.CreatedAt}} {{.Names}}' 2>/dev/null | sort | head -n1 | awk '{print $NF}')
+          if [ "$FIRST_WAITING" = "$UPGRADE_QUEUE_NAME" ]; then
+            if docker run -d --rm --name "$UPGRADE_LOCK_NAME" \
+              --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+              --label "community.lazycat.app.hermes.upgrade.active=true" \
+              --label "community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" \
+              --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
+              --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
+              --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' >/dev/null 2>&1; then
+              echo "[setup] acquired host-wide upgrade slot for $INSTANCE_ID"
+              return 0
+            fi
           fi
-          POSITION=$(printf '%s' "$RESPONSE" | sed -n 's/.*"position":\([0-9][0-9]*\).*/\1/p')
-          echo "[setup] waiting for upgrade slot${POSITION:+ (queue $POSITION)}..."
+          WAIT_COUNT=$((WAIT_COUNT+1))
+          if [ "$WAIT_COUNT" -eq 1 ] || [ $((WAIT_COUNT % 12)) -eq 0 ]; then
+            echo "[setup] waiting for host-wide upgrade slot..."
+          fi
           sleep 5
         done
-        (
-          while :; do
-            sleep 30
-            curl -fsS --connect-timeout 3 --max-time 10 \
-              -H 'Content-Type: application/json' \
-              -d "{\"token\":\"$LEASE_TOKEN\"}" \
-              "$WATCHCAT_COORDINATOR/renew" >/dev/null 2>&1 || true
-          done
-        ) &
-        LEASE_HEARTBEAT_PID=$!
       }
 
       release_upgrade_slot() {
-        [ -n "$LEASE_HEARTBEAT_PID" ] && kill "$LEASE_HEARTBEAT_PID" 2>/dev/null || true
-        if [ -n "$LEASE_TOKEN" ]; then
-          curl -fsS --connect-timeout 3 --max-time 10 \
-            -H 'Content-Type: application/json' \
-            -d "{\"token\":\"$LEASE_TOKEN\"}" \
-            "$WATCHCAT_COORDINATOR/release" >/dev/null 2>&1 || true
-          echo "[setup] released WatchCat upgrade slot"
+        if [ "$UPGRADE_LOCK_BACKEND" = docker ]; then
+          docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
+          [ -n "$UPGRADE_QUEUE_NAME" ] && docker rm -f "$UPGRADE_QUEUE_NAME" >/dev/null 2>&1 || true
+          echo "[setup] released host-wide upgrade slot"
         fi
-        LEASE_TOKEN=
-        LEASE_HEARTBEAT_PID=
+        UPGRADE_LOCK_BACKEND=
+        UPGRADE_QUEUE_NAME=
       }
 
 
