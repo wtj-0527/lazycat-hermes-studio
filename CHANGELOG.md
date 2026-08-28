@@ -1,3 +1,14 @@
+# 2026.08.29.0019（合并候选）
+
+## 合并 F5 后分类折叠修复并保留 500 MiB 上传配置
+
+- 将 `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 PR #106 已验证的镜像：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-pr2754-de600bfc-202608270942`。
+- 该镜像严格构建自已合并的 Hermes Studio PR #2754 精确 head `de600bfc3b8361c38fd0cb830683ad5eca914e5c`，修复从“最近”进入会话后按 F5 导致真实分类再次展开的问题。
+- 保留 `HERMES_MAX_UPLOAD_SIZE=524288000`，普通附件上传上限继续为 500 MiB。
+- 本次仅合并包装 PR；不创建 Release、不安装、不部署、不重启现有实例。
+
+---
+
 # 2026.08.29.0007（正式发布）
 
 ## 将附件上传上限提高到 500 MiB
@@ -7,6 +18,19 @@
 - 仅调整 LazyCat 包装配置、版本和说明；不修改 Hermes Studio 应用源码，并保留包装 `main` 当前固定的 runtime image。
 - 构建和发布新的 LPK；不安装、不部署、不重启现有实例。
 - 跟踪：#109。
+
+---
+
+# 2026.08.27.0946（测试候选）
+
+## 修复 F5 后真实分类再次自动展开
+
+- `2026.08.26.1612` 只在页面内存中记录“从最近进入”的会话；按 F5 后标记丢失，真实分类仍会被自动展开。
+- 新镜像严格构建自 Hermes Studio PR #2754 精确 head `de600bfc3b8361c38fd0cb830683ad5eca914e5c`：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-pr2754-de600bfc-202608270942`。
+- 镜像 digest：`sha256:79097893add25d1f5c4f54ddd3cafc6488619f6e1e8b3ab458d26b4ee8b4afe5`；`lazycat-ticket-lease` 与 `hermes-webui` 两处同步引用该镜像。
+- “从最近进入”的来源标记现在会在当前浏览器标签页生命周期内保存；点击会话后按 F5，真实分类仍保持折叠且不会覆盖已保存状态。
+- 通过真实分类、置顶会话等普通入口选择时会清除该标记，保持原有自动显示行为。
+- 本候选仅供用户安装验收；不创建 Tag 或正式 Release，不安装或部署，后续合并仍需用户确认。
 
 ---
 
