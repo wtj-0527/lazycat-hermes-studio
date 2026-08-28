@@ -74,6 +74,63 @@ services:
       BASE=$ROOTFS/base
       UPPER=$ROOTFS/upper
       DIRS="etc opt root srv usr var"
+      WATCHCAT_COORDINATOR=${WATCHCAT_COORDINATOR:-http://app.community.lazycat.app.watchcat.lzcapp/api/v1/upgrade-coordinator}
+      LEASE_TOKEN=
+      LEASE_HEARTBEAT_PID=
+
+      run_idle() {
+        if command -v ionice >/dev/null 2>&1; then
+          ionice -c 3 nice -n 15 "$@"
+        else
+          nice -n 15 "$@"
+        fi
+      }
+
+      acquire_upgrade_slot() {
+        if ! curl -fsS --connect-timeout 2 --max-time 5 "$WATCHCAT_COORDINATOR" >/dev/null 2>&1; then
+          echo "[setup] WatchCat coordinator unavailable; continuing with idle I/O priority"
+          return 0
+        fi
+        REQUEST_ID="${LAZYCAT_APP_DEPLOY_UID:-unknown}-${CURRENT_ID}"
+        INSTANCE_ID="${LAZYCAT_APP_DOMAIN:-${LAZYCAT_APP_DEPLOY_UID:-unknown}}"
+        while :; do
+          RESPONSE=$(curl -fsS --connect-timeout 3 --max-time 10 \
+            -H 'Content-Type: application/json' \
+            -d "{\"requestId\":\"$REQUEST_ID\",\"appId\":\"${LAZYCAT_APP_ID:-community.lazycat.app.hermes-studio}\",\"instanceId\":\"$INSTANCE_ID\",\"userId\":\"${LAZYCAT_USER_ID:-}\"}" \
+            "$WATCHCAT_COORDINATOR/acquire" 2>/dev/null || true)
+          LEASE_TOKEN=$(printf '%s' "$RESPONSE" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+          if [ -n "$LEASE_TOKEN" ]; then
+            echo "[setup] acquired WatchCat upgrade slot for $INSTANCE_ID"
+            break
+          fi
+          POSITION=$(printf '%s' "$RESPONSE" | sed -n 's/.*"position":\([0-9][0-9]*\).*/\1/p')
+          echo "[setup] waiting for upgrade slot${POSITION:+ (queue $POSITION)}..."
+          sleep 5
+        done
+        (
+          while :; do
+            sleep 30
+            curl -fsS --connect-timeout 3 --max-time 10 \
+              -H 'Content-Type: application/json' \
+              -d "{\"token\":\"$LEASE_TOKEN\"}" \
+              "$WATCHCAT_COORDINATOR/renew" >/dev/null 2>&1 || true
+          done
+        ) &
+        LEASE_HEARTBEAT_PID=$!
+      }
+
+      release_upgrade_slot() {
+        [ -n "$LEASE_HEARTBEAT_PID" ] && kill "$LEASE_HEARTBEAT_PID" 2>/dev/null || true
+        if [ -n "$LEASE_TOKEN" ]; then
+          curl -fsS --connect-timeout 3 --max-time 10 \
+            -H 'Content-Type: application/json' \
+            -d "{\"token\":\"$LEASE_TOKEN\"}" \
+            "$WATCHCAT_COORDINATOR/release" >/dev/null 2>&1 || true
+          echo "[setup] released WatchCat upgrade slot"
+        fi
+        LEASE_TOKEN=
+        LEASE_HEARTBEAT_PID=
+      }
 
 
       # --- Image fingerprint: overlay lowerdir (works for latest tag too) ---
@@ -91,40 +148,24 @@ services:
       fi
 
       if [ "$NEED_SNAPSHOT" = "1" ]; then
+        acquire_upgrade_slot
+        trap 'release_upgrade_slot' EXIT
+        trap 'release_upgrade_slot; exit 130' INT
+        trap 'release_upgrade_slot; exit 143' TERM
         mkdir -p "$BASE"
         for d in $DIRS; do
           if [ -d "/$d" ] && ! [ -L "/$d" ]; then
-            rm -rf "$BASE/$d"
+            run_idle rm -rf "$BASE/$d"
             mkdir -p "$BASE/$d"
-            SRC_SIZE=$(du -sh "/$d" 2>/dev/null | cut -f1)
-            echo "[setup] snapshotting /$d ($SRC_SIZE)..."
-            cp -a "/$d/." "$BASE/$d/" &
-            CP_PID=$!
-            while kill -0 $CP_PID 2>/dev/null; do
-              sleep 3
-              DST_SIZE=$(du -sh "$BASE/$d" 2>/dev/null | cut -f1)
-              PCT=$(echo "$DST_SIZE $SRC_SIZE" | awk '
-                { v1=$1; u1=""; v2=$2; u2="";
-                  if($1~/[A-Za-z]$/) { u1=substr($1,length($1)); v1=substr($1,1,length($1)-1) }
-                  if($2~/[A-Za-z]$/) { u2=substr($2,length($2)); v2=substr($2,1,length($2)-1) }
-                  b1=v1*(u1=="G"?1073741824:u1=="M"?1048576:u1=="K"?1024:1);
-                  b2=v2*(u2=="G"?1073741824:u2=="M"?1048576:u2=="K"?1024:1);
-                  if(b2>0) p=int(b1*100/b2); else p=100;
-                  if(p>100) p=100;
-                  w=30; f=int(p*w/100);
-                  bar=""; for(i=0;i<f;i++) bar=bar"#"; for(i=f;i<w;i++) bar=bar"-";
-                  printf "%d %s", p, bar;
-                }')
-              PCTV=$(echo "$PCT" | cut -d' ' -f1)
-              BAR=$(echo "$PCT" | cut -d" " -f2)
-              printf "[setup] [%s] %3d%%  %s/%s  /$d\n" "$BAR" "$PCTV" "$DST_SIZE" "$SRC_SIZE"
-            done
-            wait $CP_PID
-            printf "[setup] [##############################] 100%%  %s  /$d done\n" "$SRC_SIZE"
+            echo "[setup] snapshotting /$d with idle I/O priority..."
+            run_idle cp -a "/$d/." "$BASE/$d/"
+            echo "[setup] /$d snapshot complete"
           fi
         done
         echo "$CURRENT_ID" > "$ROOTFS/.image-id"
         echo "[setup] base snapshot done"
+        release_upgrade_slot
+        trap - EXIT INT TERM
       fi
 
       # --- Sync container-generated files (Docker writes each boot) ---
@@ -193,4 +234,3 @@ services:
         echo "# END HERMES LAZYCAT MCP"
       } > /etc/hosts
       rm -f "$HOSTS_CLEAN" "$MCP_HOSTS_FILE" /tmp/lazycat-mcp-unused.conf
-
