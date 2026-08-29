@@ -29,5 +29,5 @@ def test_manifest_only_updates_do_not_rebuild_the_rootfs_base():
     manifest = MANIFEST.read_text()
     assert 'CURRENT_IMAGE=$(awk' in manifest
     assert '"$ROOTFS/.image-ref"' in manifest
-    assert "migrated rootfs image fingerprint without re-snapshotting" in manifest
+    assert "migrated rootfs image fingerprint without re-snapshotting" not in manifest
     assert 'elif [ "$CURRENT_IMAGE" != "$STORED_IMAGE" ]; then' in manifest

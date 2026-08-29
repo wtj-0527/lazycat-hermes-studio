@@ -1,3 +1,17 @@
+# 2026.08.29.2216（正式发布）
+
+## Hermes Studio 0.7.1
+
+- 严格基于 `EKKOLearnAI/hermes-studio` `main@470cc6a34c046cba2e7d8ab28935dac377a4b005` 构建，不携带未合并 PR。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.1-main-470cc6a3-202608292216`。
+- 远端镜像 digest：`sha256:e7a35c92ae0f6549c740283783c103d33126058a61be72d5befb08aa26093bda`；镜像内 Hermes Studio 0.7.1、Hermes Agent 0.20.6、Node 24.15.0、node-pty、Sharp 与 `/livez` 验收通过。
+- 同步上游 0.7.0–0.7.1：全局 Agent 配置、历史内联图片清理、开发数据目录隔离、Studio 设置与 Agent 管理修复，以及内存持久化和故障恢复增强。
+- 移除只适用于上一镜像的旧 rootfs 指纹免快照迁移；从更早版本直接升级且缺少 `.image-ref` 时会正确重建基线，已有 `.image-ref` 的当前版本仍按镜像变化执行升级。
+- 保留 `HERMES_MAX_UPLOAD_SIZE=524288000`、LazyCat MCP Ticket 隔离和设备级 FIFO rootfs 快照协调。
+- 本次发布只构建镜像和 LPK；不安装、不部署、不重启现有实例。
+
+---
+
 # 2026.08.29.0404（I/O 保护更新）
 
 ## 多用户实例升级串行化

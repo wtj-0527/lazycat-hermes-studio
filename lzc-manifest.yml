@@ -20,7 +20,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   lazycat-ticket-lease:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-main-c96ae3a5-pr2758-eadb416c-202608290235
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.1-main-470cc6a3-202608292216
     entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
     # LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime into this
     # application service. Never construct or override the gateway address.
@@ -33,7 +33,7 @@ services:
       - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.6.47-main-c96ae3a5-pr2758-eadb416c-202608290235
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.1-main-470cc6a3-202608292216
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/livez"]
       interval: 15s
@@ -177,13 +177,7 @@ services:
       STORED_IMAGE=$(cat "$ROOTFS/.image-ref" 2>/dev/null)
       # --- First boot or image update: snapshot base ---
       NEED_SNAPSHOT=0
-      if [ -z "$STORED_IMAGE" ] && [ -f "$ROOTFS/.image-id" ] && [ -d "$BASE/usr" ]; then
-        # Legacy releases fingerprinted the complete manifest. This release uses
-        # the unchanged 2026.08.29.0235 image, so migrate without copying rootfs.
-        echo "$CURRENT_IMAGE" > "$ROOTFS/.image-ref"
-        STORED_IMAGE=$CURRENT_IMAGE
-        echo "[setup] migrated rootfs image fingerprint without re-snapshotting"
-      elif [ -z "$STORED_IMAGE" ]; then
+      if [ -z "$STORED_IMAGE" ]; then
         echo "[setup] first boot: creating base snapshot..."
         NEED_SNAPSHOT=1
       elif [ "$CURRENT_IMAGE" != "$STORED_IMAGE" ]; then
