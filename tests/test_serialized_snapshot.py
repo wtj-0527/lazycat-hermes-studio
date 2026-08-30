@@ -14,6 +14,8 @@ def test_rootfs_snapshot_uses_watchcat_fifo_and_idle_io():
     assert 'docker image inspect "$LOCK_IMAGE"' in manifest
     assert "UPGRADE_PROGRESS_LABEL" in manifest
     assert "cleanup_stale_upgrade_markers" in manifest
+    assert 'MARKER_CREATED=$(docker inspect "$MARKER_ID"' in manifest
+    assert 'date -d "$MARKER_CREATED" +%s' in manifest
     assert "UPGRADE_HEARTBEAT_PID" in manifest
     assert "acquire_upgrade_slot" in manifest
     assert "release_upgrade_slot" in manifest
