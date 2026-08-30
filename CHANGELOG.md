@@ -1,3 +1,17 @@
+# 2026.08.30.2336（正式发布）
+
+## Hermes Studio 0.7.12
+
+- 严格基于 `EKKOLearnAI/hermes-studio` `main@c990be4cf4baed7ceefa8fba89b12c448ad07e1b` 构建，不携带未合并 PR。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.12-main-c990be4c-202608302336`。
+- 远端镜像 digest：`sha256:6ae4f4cc9edc27f373a9e3be74e56d10ce0161d3fbdf493170aa00943c72f4cb`；镜像内 Hermes Studio 0.7.12、Hermes Agent 0.20.6、Node 24.15.0、node-pty、Sharp 与 `/livez` 验收通过。
+- 同步上游 0.7.11–0.7.12 及最新 main：DeepSeek thinking tool calls、shell 包装 Runtime 启动恢复、pending interaction 超时体验、升级启动崩溃隔离、Ekko Runtime 模块自愈，以及 Windows Hermes Home、启动和文件系统重试修复。
+- 纳入 `2026.08.30.1100` 包装改进：rootfs 升级使用设备级 FIFO、心跳与过期标记清理，并通过 `/proc/<pid>/io` 显示复制进度，避免递归扫描 Btrfs 目标目录。
+- 保留 `HERMES_MAX_UPLOAD_SIZE=524288000`、LazyCat MCP Ticket 隔离和全 rootfs 持久化。
+- 本次发布只构建镜像和 LPK；不安装、不部署、不重启现有实例。
+
+---
+
 # 2026.08.30.1100（启动进度与排队修复）
 
 - 修正升级协调器错误地通过容器 hostname 查找 playground Docker 镜像，导致队列未注册的问题；现在直接使用当前 Hermes Studio 镜像创建协调标记。
