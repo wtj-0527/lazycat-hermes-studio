@@ -76,8 +76,13 @@ services:
       DIRS="etc opt root srv usr var"
       UPGRADE_LOCK_NAME=hermes-studio-rootfs-upgrade-lock
       UPGRADE_QUEUE_LABEL=community.lazycat.app.hermes.upgrade.queue
+      UPGRADE_PROGRESS_LABEL=community.lazycat.app.hermes.upgrade.progress
       UPGRADE_LOCK_BACKEND=
       UPGRADE_QUEUE_NAME=
+      UPGRADE_QUEUE_ID=
+      UPGRADE_PROGRESS_ID=
+      UPGRADE_HEARTBEAT_PID=
+      PROGRESS_STATE=/tmp/hermes-rootfs-progress
 
       run_idle() {
         if command -v ionice >/dev/null 2>&1; then
@@ -85,6 +90,77 @@ services:
         else
           nice -n 15 "$@"
         fi
+      }
+
+      write_progress() {
+        PHASE=$1
+        PERCENT=$2
+        COMPLETED=$3
+        TOTAL=$4
+        printf '%s|%s|%s|%s\n' "$PHASE" "$PERCENT" "$COMPLETED" "$TOTAL" > "$PROGRESS_STATE.tmp"
+        mv "$PROGRESS_STATE.tmp" "$PROGRESS_STATE"
+      }
+
+      progress_marker_name() {
+        IFS='|' read -r PHASE PERCENT COMPLETED TOTAL < "$PROGRESS_STATE"
+        NOW=$(date +%s)
+        COMPLETED_MIB=$((COMPLETED / 1048576))
+        TOTAL_MIB=$((TOTAL / 1048576))
+        printf 'hermes-studio-rootfs-progress-%s-%s-p%03d-c%d-t%d-u%d' \
+          "$REQUEST_HASH" "$PHASE" "$PERCENT" "$COMPLETED_MIB" "$TOTAL_MIB" "$NOW"
+      }
+
+      start_progress_heartbeat() {
+        write_progress waiting 0 0 0
+        (
+          while docker inspect "$UPGRADE_PROGRESS_ID" >/dev/null 2>&1; do
+            docker rename "$UPGRADE_PROGRESS_ID" "$(progress_marker_name)" >/dev/null 2>&1 || true
+            sleep 10
+          done
+        ) &
+        UPGRADE_HEARTBEAT_PID=$!
+      }
+
+      progress_epoch_for_request() {
+        TARGET_REQUEST=$1
+        for PROGRESS_ID in $(docker ps -aq --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
+          PROGRESS_REQUEST=$(docker inspect "$PROGRESS_ID" 2>/dev/null |
+            awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }')
+          [ "$PROGRESS_REQUEST" = "$TARGET_REQUEST" ] || continue
+          docker inspect "$PROGRESS_ID" 2>/dev/null |
+            awk -F'"' '$2 == "Name" { sub("^/", "", $4); print $4; exit }' |
+            sed -n 's/.*-u\([0-9][0-9]*\)$/\1/p'
+          return
+        done
+      }
+
+      cleanup_stale_upgrade_markers() {
+        NOW=$(date +%s)
+        for MARKER_ID in $(docker ps -aq \
+          --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
+          MARKER_REQUEST=$(docker inspect "$MARKER_ID" 2>/dev/null |
+            awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }')
+          MARKER_EPOCH=$(progress_epoch_for_request "$MARKER_REQUEST")
+          if [ -n "$MARKER_EPOCH" ] && [ $((NOW - MARKER_EPOCH)) -gt 300 ]; then
+            docker rm -f "$MARKER_ID" >/dev/null 2>&1 || true
+          fi
+        done
+        LOCK_OWNER=$(docker inspect "$UPGRADE_LOCK_NAME" 2>/dev/null |
+          awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }' || true)
+        if [ -n "$LOCK_OWNER" ]; then
+          LOCK_EPOCH=$(progress_epoch_for_request "$LOCK_OWNER")
+          if [ -z "$LOCK_EPOCH" ] || [ $((NOW - LOCK_EPOCH)) -gt 300 ]; then
+            docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
+          fi
+        fi
+        for PROGRESS_ID in $(docker ps -aq --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
+          PROGRESS_NAME=$(docker inspect "$PROGRESS_ID" 2>/dev/null |
+            awk -F'"' '$2 == "Name" { sub("^/", "", $4); print $4; exit }')
+          PROGRESS_EPOCH=$(printf '%s' "$PROGRESS_NAME" | sed -n 's/.*-u\([0-9][0-9]*\)$/\1/p')
+          if [ -n "$PROGRESS_EPOCH" ] && [ $((NOW - PROGRESS_EPOCH)) -gt 300 ]; then
+            docker rm -f "$PROGRESS_ID" >/dev/null 2>&1 || true
+          fi
+        done
       }
 
       acquire_upgrade_slot() {
@@ -96,43 +172,67 @@ services:
         INSTANCE_ID="${LAZYCAT_APP_DOMAIN:-${LAZYCAT_APP_DEPLOY_UID:-unknown}}"
         REQUEST_HASH=$(printf '%s' "$REQUEST_ID" | md5sum | cut -c1-16)
         UPGRADE_QUEUE_NAME="hermes-studio-rootfs-wait-$REQUEST_HASH"
-        LOCK_IMAGE=$(docker inspect "$HOSTNAME" 2>/dev/null |
-          awk -F'"' '$2 == "Image" { print $4; exit }')
-        if [ -z "$LOCK_IMAGE" ]; then
-          echo "[setup] unable to identify current image; continuing with idle I/O priority"
+        LOCK_IMAGE=$CURRENT_IMAGE
+        if ! docker image inspect "$LOCK_IMAGE" >/dev/null 2>&1; then
+          echo "[setup] current image is unavailable to the upgrade coordinator; continuing with idle I/O priority"
           UPGRADE_QUEUE_NAME=
           return 0
         fi
-        docker rm -f "$UPGRADE_QUEUE_NAME" >/dev/null 2>&1 || true
+        cleanup_stale_upgrade_markers
+        for OLD_ID in $(docker ps -aq \
+          --filter "label=$UPGRADE_QUEUE_LABEL=true" \
+          --filter "label=community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" 2>/dev/null); do
+          docker rm -f "$OLD_ID" >/dev/null 2>&1 || true
+        done
+        for OLD_ID in $(docker ps -aq \
+          --filter "label=$UPGRADE_PROGRESS_LABEL=true" \
+          --filter "label=community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" 2>/dev/null); do
+          docker rm -f "$OLD_ID" >/dev/null 2>&1 || true
+        done
         LOCK_OWNER=$(docker inspect "$UPGRADE_LOCK_NAME" 2>/dev/null |
           awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }' || true)
         if [ "$LOCK_OWNER" = "$REQUEST_ID" ]; then
           docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
         fi
-        if ! docker run -d --rm --name "$UPGRADE_QUEUE_NAME" \
+        UPGRADE_QUEUE_ID=$(docker run -d --rm --name "$UPGRADE_QUEUE_NAME" \
           --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
           --label "$UPGRADE_QUEUE_LABEL=true" \
           --label "community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" \
           --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
           --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
-          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' >/dev/null; then
+          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' 2>/dev/null) || true
+        if [ -z "$UPGRADE_QUEUE_ID" ]; then
           echo "[setup] unable to register upgrade queue entry; continuing with idle I/O priority"
           UPGRADE_QUEUE_NAME=
           return 0
         fi
+        UPGRADE_PROGRESS_ID=$(docker run -d --rm \
+          --name "hermes-studio-rootfs-progress-$REQUEST_HASH-waiting-p000-c0-t0-u$(date +%s)" \
+          --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
+          --label "$UPGRADE_PROGRESS_LABEL=true" \
+          --label "community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" \
+          --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
+          --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
+          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' 2>/dev/null) || true
+        if [ -z "$UPGRADE_PROGRESS_ID" ]; then
+          docker rm -f "$UPGRADE_QUEUE_ID" >/dev/null 2>&1 || true
+          UPGRADE_QUEUE_ID=
+          echo "[setup] unable to register upgrade progress; continuing with idle I/O priority"
+          return 0
+        fi
+        start_progress_heartbeat
         UPGRADE_LOCK_BACKEND=docker
         WAIT_COUNT=0
         while :; do
+          cleanup_stale_upgrade_markers
           FIRST_WAITING=$(
             for WAITING_ID in $(docker ps -aq --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
               WAITING_CREATED=$(docker inspect "$WAITING_ID" 2>/dev/null |
                 awk -F'"' '$2 == "Created" { print $4; exit }')
-              WAITING_NAME=$(docker inspect "$WAITING_ID" 2>/dev/null |
-                awk -F'"' '$2 == "Name" { sub("^/", "", $4); print $4; exit }')
-              printf '%s %s\n' "$WAITING_CREATED" "$WAITING_NAME"
+              printf '%s %s\n' "$WAITING_CREATED" "$WAITING_ID"
             done | sort | head -n1 | awk '{print $NF}'
           )
-          if [ "$FIRST_WAITING" = "$UPGRADE_QUEUE_NAME" ]; then
+          if [ "$FIRST_WAITING" = "$UPGRADE_QUEUE_ID" ]; then
             if docker run -d --rm --name "$UPGRADE_LOCK_NAME" \
               --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
               --label "community.lazycat.app.hermes.upgrade.active=true" \
@@ -140,6 +240,9 @@ services:
               --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
               --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
               --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' >/dev/null 2>&1; then
+              docker rm -f "$UPGRADE_QUEUE_ID" >/dev/null 2>&1 || true
+              UPGRADE_QUEUE_ID=
+              write_progress calculating 0 0 0
               echo "[setup] acquired host-wide upgrade slot for $INSTANCE_ID"
               return 0
             fi
@@ -154,12 +257,19 @@ services:
 
       release_upgrade_slot() {
         if [ "$UPGRADE_LOCK_BACKEND" = docker ]; then
-          docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
-          [ -n "$UPGRADE_QUEUE_NAME" ] && docker rm -f "$UPGRADE_QUEUE_NAME" >/dev/null 2>&1 || true
+          LOCK_OWNER=$(docker inspect "$UPGRADE_LOCK_NAME" 2>/dev/null |
+            awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }' || true)
+          [ "$LOCK_OWNER" = "$REQUEST_ID" ] && docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
+          [ -n "$UPGRADE_QUEUE_ID" ] && docker rm -f "$UPGRADE_QUEUE_ID" >/dev/null 2>&1 || true
+          [ -n "$UPGRADE_PROGRESS_ID" ] && docker rm -f "$UPGRADE_PROGRESS_ID" >/dev/null 2>&1 || true
+          [ -n "$UPGRADE_HEARTBEAT_PID" ] && kill "$UPGRADE_HEARTBEAT_PID" 2>/dev/null || true
           echo "[setup] released host-wide upgrade slot"
         fi
         UPGRADE_LOCK_BACKEND=
         UPGRADE_QUEUE_NAME=
+        UPGRADE_QUEUE_ID=
+        UPGRADE_PROGRESS_ID=
+        UPGRADE_HEARTBEAT_PID=
       }
 
 
@@ -192,17 +302,55 @@ services:
         trap 'release_upgrade_slot; exit 130' INT
         trap 'release_upgrade_slot; exit 143' TERM
         mkdir -p "$BASE"
+        SNAPSHOT_SIZES=/tmp/hermes-rootfs-sizes
+        : > "$SNAPSHOT_SIZES"
+        TOTAL_BYTES=0
         for d in $DIRS; do
           if [ -d "/$d" ] && ! [ -L "/$d" ]; then
+            DIR_BYTES=$(du -sb "/$d" 2>/dev/null | awk '{print $1}')
+            DIR_BYTES=${DIR_BYTES:-0}
+            printf '%s %s\n' "$d" "$DIR_BYTES" >> "$SNAPSHOT_SIZES"
+            TOTAL_BYTES=$((TOTAL_BYTES + DIR_BYTES))
+          fi
+        done
+        write_progress preparing 0 0 "$TOTAL_BYTES"
+        COMPLETED_BYTES=0
+        for d in $DIRS; do
+          if [ -d "/$d" ] && ! [ -L "/$d" ]; then
+            DIR_BYTES=$(awk -v target="$d" '$1 == target { print $2; exit }' "$SNAPSHOT_SIZES")
+            DIR_BYTES=${DIR_BYTES:-0}
+            PERCENT=$((TOTAL_BYTES > 0 ? COMPLETED_BYTES * 100 / TOTAL_BYTES : 0))
+            write_progress "cleanup-$d" "$PERCENT" "$COMPLETED_BYTES" "$TOTAL_BYTES"
             run_idle rm -rf "$BASE/$d"
             mkdir -p "$BASE/$d"
             echo "[setup] snapshotting /$d with idle I/O priority..."
-            run_idle cp -a "/$d/." "$BASE/$d/"
+            if command -v ionice >/dev/null 2>&1; then
+              ionice -c 3 nice -n 15 cp -a "/$d/." "$BASE/$d/" &
+            else
+              nice -n 15 cp -a "/$d/." "$BASE/$d/" &
+            fi
+            COPY_PID=$!
+            while kill -0 "$COPY_PID" 2>/dev/null; do
+              COPIED_BYTES=$(awk '$1 == "wchar:" { print $2 }' "/proc/$COPY_PID/io" 2>/dev/null)
+              COPIED_BYTES=${COPIED_BYTES:-0}
+              [ "$COPIED_BYTES" -gt "$DIR_BYTES" ] && COPIED_BYTES=$DIR_BYTES
+              CURRENT_BYTES=$((COMPLETED_BYTES + COPIED_BYTES))
+              PERCENT=$((TOTAL_BYTES > 0 ? CURRENT_BYTES * 100 / TOTAL_BYTES : 0))
+              [ "$PERCENT" -gt 99 ] && PERCENT=99
+              write_progress "copy-$d" "$PERCENT" "$CURRENT_BYTES" "$TOTAL_BYTES"
+              sleep 10
+            done
+            wait "$COPY_PID"
+            COMPLETED_BYTES=$((COMPLETED_BYTES + DIR_BYTES))
+            PERCENT=$((TOTAL_BYTES > 0 ? COMPLETED_BYTES * 100 / TOTAL_BYTES : 0))
+            write_progress "copy-$d" "$PERCENT" "$COMPLETED_BYTES" "$TOTAL_BYTES"
             echo "[setup] /$d snapshot complete"
           fi
         done
+        rm -f "$SNAPSHOT_SIZES"
         echo "$CURRENT_ID" > "$ROOTFS/.image-id"
         echo "$CURRENT_IMAGE" > "$ROOTFS/.image-ref"
+        write_progress completed 100 "$TOTAL_BYTES" "$TOTAL_BYTES"
         echo "[setup] base snapshot done"
         release_upgrade_slot
         trap - EXIT INT TERM
