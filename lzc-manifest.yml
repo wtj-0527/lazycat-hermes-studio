@@ -123,7 +123,7 @@ services:
 
       progress_epoch_for_request() {
         TARGET_REQUEST=$1
-        for PROGRESS_ID in $(docker ps -aq --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
+        for PROGRESS_ID in $(docker ps -aq --no-trunc --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
           PROGRESS_REQUEST=$(docker inspect "$PROGRESS_ID" 2>/dev/null |
             awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }')
           [ "$PROGRESS_REQUEST" = "$TARGET_REQUEST" ] || continue
@@ -136,7 +136,7 @@ services:
 
       cleanup_stale_upgrade_markers() {
         NOW=$(date +%s)
-        for MARKER_ID in $(docker ps -aq \
+        for MARKER_ID in $(docker ps -aq --no-trunc \
           --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
           MARKER_REQUEST=$(docker inspect "$MARKER_ID" 2>/dev/null |
             awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }')
@@ -158,7 +158,7 @@ services:
             docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
           fi
         fi
-        for PROGRESS_ID in $(docker ps -aq --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
+        for PROGRESS_ID in $(docker ps -aq --no-trunc --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
           PROGRESS_NAME=$(docker inspect "$PROGRESS_ID" 2>/dev/null |
             awk -F'"' '$2 == "Name" { sub("^/", "", $4); print $4; exit }')
           PROGRESS_EPOCH=$(printf '%s' "$PROGRESS_NAME" | sed -n 's/.*-u\([0-9][0-9]*\)$/\1/p')
@@ -184,12 +184,12 @@ services:
           return 0
         fi
         cleanup_stale_upgrade_markers
-        for OLD_ID in $(docker ps -aq \
+        for OLD_ID in $(docker ps -aq --no-trunc \
           --filter "label=$UPGRADE_QUEUE_LABEL=true" \
           --filter "label=community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" 2>/dev/null); do
           docker rm -f "$OLD_ID" >/dev/null 2>&1 || true
         done
-        for OLD_ID in $(docker ps -aq \
+        for OLD_ID in $(docker ps -aq --no-trunc \
           --filter "label=$UPGRADE_PROGRESS_LABEL=true" \
           --filter "label=community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" 2>/dev/null); do
           docker rm -f "$OLD_ID" >/dev/null 2>&1 || true
@@ -231,7 +231,7 @@ services:
         while :; do
           cleanup_stale_upgrade_markers
           FIRST_WAITING=$(
-            for WAITING_ID in $(docker ps -aq --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
+            for WAITING_ID in $(docker ps -aq --no-trunc --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
               WAITING_CREATED=$(docker inspect "$WAITING_ID" 2>/dev/null |
                 awk -F'"' '$2 == "Created" { print $4; exit }')
               printf '%s %s\n' "$WAITING_CREATED" "$WAITING_ID"

@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 
 MANIFEST = Path(__file__).resolve().parents[1] / "lzc-manifest.yml"
@@ -22,6 +23,25 @@ def test_rootfs_snapshot_uses_watchcat_fifo_and_idle_io():
     assert "ionice -c 3 nice -n 15" in manifest
     assert 'run_idle rm -rf "$BASE/$d"' in manifest
     assert 'cp -a "/$d/." "$BASE/$d/" &' in manifest
+    assert (
+        'docker ps -aq --no-trunc --filter "label=$UPGRADE_QUEUE_LABEL=true"'
+        in manifest
+    )
+
+
+def test_upgrade_coordinator_never_compares_truncated_container_ids():
+    manifest = MANIFEST.read_text()
+    docker_ps_queries = re.findall(
+        r"docker ps -aq.*?2>/dev/null", manifest, flags=re.DOTALL
+    )
+    assert docker_ps_queries
+    assert all("--no-trunc" in query for query in docker_ps_queries)
+
+    docker_run_id = "0123456789ab" + ("c" * 52)
+    docker_ps_short_id = docker_run_id[:12]
+    docker_ps_no_trunc_id = docker_run_id
+    assert docker_ps_short_id != docker_run_id
+    assert docker_ps_no_trunc_id == docker_run_id
 
 
 def test_rootfs_snapshot_does_not_rescan_destination_for_progress():
