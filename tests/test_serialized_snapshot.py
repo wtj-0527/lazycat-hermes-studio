@@ -56,6 +56,16 @@ def test_rootfs_snapshot_does_not_rescan_destination_for_progress():
     assert "PERCENT" in snapshot
 
 
+def test_rootfs_snapshot_prints_visual_progress_bars():
+    manifest = MANIFEST.read_text()
+    assert "print_snapshot_progress_bar()" in manifest
+    assert "print_waiting_progress_bar()" in manifest
+    assert "'[setup] rootfs [%s] %3d%% %s (%d MiB / %d MiB)\\n'" in manifest
+    assert "'[setup] queue  [%s] waiting for host-wide upgrade slot\\n'" in manifest
+    assert 'print_snapshot_progress_bar "$PHASE" "$PERCENT" "$COMPLETED" "$TOTAL"' in manifest
+    assert 'print_waiting_progress_bar "$WAIT_COUNT"' in manifest
+
+
 def test_manifest_only_updates_do_not_rebuild_the_rootfs_base():
     manifest = MANIFEST.read_text()
     assert 'CURRENT_IMAGE=$(awk' in manifest

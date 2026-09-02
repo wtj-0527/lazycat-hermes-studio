@@ -92,6 +92,50 @@ services:
         fi
       }
 
+      print_snapshot_progress_bar() {
+        PHASE=$1
+        PERCENT=$2
+        COMPLETED=$3
+        TOTAL=$4
+        BAR_WIDTH=30
+        FILLED=$((PERCENT * BAR_WIDTH / 100))
+        BAR=
+        INDEX=0
+        while [ "$INDEX" -lt "$FILLED" ]; do
+          BAR="${BAR}#"
+          INDEX=$((INDEX + 1))
+        done
+        while [ "$INDEX" -lt "$BAR_WIDTH" ]; do
+          BAR="${BAR}."
+          INDEX=$((INDEX + 1))
+        done
+        if [ "$TOTAL" -gt 0 ]; then
+          COMPLETED_MIB=$((COMPLETED / 1048576))
+          TOTAL_MIB=$((TOTAL / 1048576))
+          printf '[setup] rootfs [%s] %3d%% %s (%d MiB / %d MiB)\n' \
+            "$BAR" "$PERCENT" "$PHASE" "$COMPLETED_MIB" "$TOTAL_MIB"
+        else
+          printf '[setup] rootfs [%s] %s\n' "$BAR" "$PHASE"
+        fi
+      }
+
+      print_waiting_progress_bar() {
+        STEP=$1
+        BAR_WIDTH=30
+        POSITION=$((STEP % BAR_WIDTH))
+        BAR=
+        INDEX=0
+        while [ "$INDEX" -lt "$BAR_WIDTH" ]; do
+          if [ "$INDEX" -eq "$POSITION" ]; then
+            BAR="${BAR}>"
+          else
+            BAR="${BAR}."
+          fi
+          INDEX=$((INDEX + 1))
+        done
+        printf '[setup] queue  [%s] waiting for host-wide upgrade slot\n' "$BAR"
+      }
+
       write_progress() {
         PHASE=$1
         PERCENT=$2
@@ -99,6 +143,7 @@ services:
         TOTAL=$4
         printf '%s|%s|%s|%s\n' "$PHASE" "$PERCENT" "$COMPLETED" "$TOTAL" > "$PROGRESS_STATE.tmp"
         mv "$PROGRESS_STATE.tmp" "$PROGRESS_STATE"
+        print_snapshot_progress_bar "$PHASE" "$PERCENT" "$COMPLETED" "$TOTAL"
       }
 
       progress_marker_name() {
@@ -253,8 +298,8 @@ services:
             fi
           fi
           WAIT_COUNT=$((WAIT_COUNT+1))
-          if [ "$WAIT_COUNT" -eq 1 ] || [ $((WAIT_COUNT % 12)) -eq 0 ]; then
-            echo "[setup] waiting for host-wide upgrade slot..."
+          if [ "$WAIT_COUNT" -eq 1 ] || [ $((WAIT_COUNT % 2)) -eq 0 ]; then
+            print_waiting_progress_bar "$WAIT_COUNT"
           fi
           sleep 5
         done
