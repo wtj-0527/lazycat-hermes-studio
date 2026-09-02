@@ -1,3 +1,16 @@
+# 2026.09.02.1115（正式发布）
+
+## Hermes Studio 0.7.16
+
+- 严格基于 `EKKOLearnAI/hermes-studio` `main@292a675d6cc82b50baae51d1268980186a985929` 构建，不携带未合并 PR。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.16-main-292a675d-202609021115`。
+- 远端镜像 digest：`sha256:e7c11d4f9944a240bc3a03f44c87b5d4a96f47b1ffa3f2b1cd26b5c29f7b8d85`；镜像内 Hermes Studio 0.7.16、Hermes Agent 0.21.0、Node 24.15.0、node-pty、Sharp 与 `/livez` 验收通过。
+- 同步上游 0.7.13–0.7.16：统一 Hermes Runtime 选择和损坏版本回退、离线版本检测与可控重启、Ekko 文件读取保护和跨平台命令、Coding Agent scoped/global 隔离模式、Grok Coding Agent，以及 Windows 旧数据安全迁移。
+- 保留 `HERMES_MAX_UPLOAD_SIZE=524288000`、LazyCat MCP Ticket 隔离、设备级 FIFO rootfs 升级协调和全 rootfs 持久化。
+- 本次发布只构建镜像和 LPK；不安装、不部署、不重启现有实例。
+
+---
+
 # 2026.08.31.1043（升级队列完整 ID 修复）
 
 - 修复 `2026.08.31.0750` 仍会永久停在“waiting for host-wide upgrade slot”的根因：`docker run -d` 返回 64 位完整容器 ID，而 FIFO 枚举此前使用 `docker ps -q` 的 12 位短 ID，导致当前实例永远无法识别自己是队首。
