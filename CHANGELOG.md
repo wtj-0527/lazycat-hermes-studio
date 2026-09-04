@@ -1,3 +1,15 @@
+# 2026.09.04.1551（main + PR #2820 + PR #2885）
+
+- 上游基线：`EKKOLearnAI/hermes-studio main@dfb86f3c6920b6f58c919565bea9c5498dcbf835`（v0.7.17）。
+- 集成未合并 PR #2820：`c8627968d619a106897b90ab1031fade514fdb0a`，增加 Agent 一次性移动端定位请求。
+- 集成未合并 PR #2885：`58f4bc1901a8dbc352f85df3fb0e807d8061d8d9`，增加发送前待上传图片预览。
+- 组合构建 tree：`e52b6a2c6b7f5868b433d2fac165f118e6de2077`。
+- 运行镜像：`registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.17-main-dfb86f3c-pr2820-c8627968-pr2885-58f4bc19-202609041551`。
+- 镜像 digest：`sha256:97fe00703a947f0d28b7f846924b58efd0f2fc94999d921afaa2a0dba7f50785`。
+- 两个 PR 定向回归 72 项通过，生产构建通过。全量测试受当前打包机已安装 Hermes Runtime 与并发性能影响存在 13 项环境相关失败，未发现落在 #2820/#2885 定向测试中。
+
+---
+
 # 2026.09.02.1223（启动条形进度）
 
 - rootfs 升级等待队列现在每 10 秒输出一条会移动的 ASCII 条形进度，启动页不再只显示静态等待文字。
