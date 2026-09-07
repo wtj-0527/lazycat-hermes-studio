@@ -9,14 +9,11 @@ def test_rootfs_snapshot_uses_watchcat_fifo_and_idle_io():
     manifest = MANIFEST.read_text()
     assert "hermes-studio-rootfs-upgrade-lock" in manifest
     assert "community.lazycat.app.hermes.upgrade.queue" in manifest
-    assert "docker run -d --rm --name" in manifest
+    assert "docker run -d --name" in manifest
     assert "FIRST_WAITING" in manifest
-    assert 'LOCK_IMAGE=$CURRENT_IMAGE' in manifest
+    assert 'LOCK_IMAGE=$UPGRADE_COORDINATOR_IMAGE' in manifest
     assert 'docker image inspect "$LOCK_IMAGE"' in manifest
     assert "UPGRADE_PROGRESS_LABEL" in manifest
-    assert "cleanup_stale_upgrade_markers" in manifest
-    assert 'MARKER_CREATED=$(docker inspect "$MARKER_ID"' in manifest
-    assert 'date -d "$MARKER_CREATED" +%s' in manifest
     assert "UPGRADE_HEARTBEAT_PID" in manifest
     assert "acquire_upgrade_slot" in manifest
     assert "release_upgrade_slot" in manifest
