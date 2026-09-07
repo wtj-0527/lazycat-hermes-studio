@@ -64,3 +64,30 @@ uv tool install <package>          # → ~/.local/bin/，重启不丢
 ## License
 
 [AGPL-3.0](LICENSE)
+
+## Rootfs 升级协调器（fail-closed）
+
+普通启动可并行；镜像变化时的 rootfs 删除/复制必须先取得共享 playground
+Docker 上的 `hermes-studio-rootfs-upgrade-lock`。所有实例必须挂载同一个
+`/data/playground/docker.sock`（现有 compose override），不得改为各实例私有 Docker。
+升级已有安装前应核对实际挂载，因为 compose override 不一定在升级时重新生成。
+
+协调器使用独立的 `registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine`
+镜像作为仅运行 sleep 的标记容器；缺失时拉取，不要求 playground 中存在 Hermes
+业务镜像。Docker、拉取或队列注册失败会停止 setup，绝不无锁重建。
+离线部署需事先在共享 playground Docker 中准备该协调镜像。
+
+安全优先：锁与排队标记不设自动过期，不使用 `--rm`，心跳只用于展示。
+复制失败、setup 异常退出或宿主重启后可能留下锁/队列，需要人工恢复；
+这比误判慢 I/O 已停止并放行另一个重建更安全。协调器状态存储必须持久化，
+升级期间禁止删除标记、清理 playground 容器或重置 Docker 数据。
+
+恢复步骤：先停止/禁止相关实例自动唤醒，确认所有对应 setup、rm、cp 进程已经退出
+（尤其不能只检查 setup 父进程），再检查锁的 request/instance 标签，删除该失败任务
+对应的 active/queue/progress 标记。不可按心跳时间盲删锁，也不可在复制仍运行时清理。
+之后只启动一个实例观察取得锁、重建成功、释放锁，再允许其他实例恢复。
+新旧脚本不能混跑：旧版会在协调器失败时无锁执行，也会按心跳清理锁。
+
+测试：`uv run --with pytest --with pyyaml python -m pytest tests/test_serialized_snapshot.py tests/test_upgrade_coordinator_runtime.py -q`。
+运行时测试执行 manifest 中的真实 shell，使用进程间加锁的模拟 Docker；
+覆盖三实例互斥与 Docker/拉取/注册故障，不代替真实设备升级验收。

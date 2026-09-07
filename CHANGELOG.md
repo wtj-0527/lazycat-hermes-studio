@@ -1,3 +1,11 @@
+## Rootfs upgrade coordinator fail-closed
+
+- Use an independent small coordinator image on the shared playground Docker.
+- Refuse rootfs rebuild when coordination fails; retain locks on failure.
+- Remove time-based lock revocation and check copy failures before fingerprints.
+- Add executable three-process mutual exclusion and failure-path tests.
+- Pin Hermes services to v0.7.18-unified-events-202609071405.
+
 # 2026.09.04.1551（main + PR #2820 + PR #2885）
 
 - 上游基线：`EKKOLearnAI/hermes-studio main@dfb86f3c6920b6f58c919565bea9c5498dcbf835`（v0.7.17）。

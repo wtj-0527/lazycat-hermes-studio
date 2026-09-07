@@ -20,7 +20,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   lazycat-ticket-lease:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.17-main-dfb86f3c-pr2820-c8627968-pr2885-58f4bc19-202609041551
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.18-unified-events-202609071405
     entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
     # LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime into this
     # application service. Never construct or override the gateway address.
@@ -33,7 +33,7 @@ services:
       - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.17-main-dfb86f3c-pr2820-c8627968-pr2885-58f4bc19-202609041551
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.18-unified-events-202609071405
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/livez"]
       interval: 15s
@@ -74,6 +74,8 @@ services:
       BASE=$ROOTFS/base
       UPPER=$ROOTFS/upper
       DIRS="etc opt root srv usr var"
+      # All instances use the shared playground Docker socket, not lzc-docker.
+      UPGRADE_COORDINATOR_IMAGE=registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine
       UPGRADE_LOCK_NAME=hermes-studio-rootfs-upgrade-lock
       UPGRADE_QUEUE_LABEL=community.lazycat.app.hermes.upgrade.queue
       UPGRADE_PROGRESS_LABEL=community.lazycat.app.hermes.upgrade.progress
@@ -166,115 +168,61 @@ services:
         UPGRADE_HEARTBEAT_PID=$!
       }
 
-      progress_epoch_for_request() {
-        TARGET_REQUEST=$1
-        for PROGRESS_ID in $(docker ps -aq --no-trunc --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
-          PROGRESS_REQUEST=$(docker inspect "$PROGRESS_ID" 2>/dev/null |
-            awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }')
-          [ "$PROGRESS_REQUEST" = "$TARGET_REQUEST" ] || continue
-          docker inspect "$PROGRESS_ID" 2>/dev/null |
-            awk -F'"' '$2 == "Name" { sub("^/", "", $4); print $4; exit }' |
-            sed -n 's/.*-u\([0-9][0-9]*\)$/\1/p'
-          return
-        done
-      }
-
-      cleanup_stale_upgrade_markers() {
-        NOW=$(date +%s)
-        for MARKER_ID in $(docker ps -aq --no-trunc \
-          --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
-          MARKER_REQUEST=$(docker inspect "$MARKER_ID" 2>/dev/null |
-            awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }')
-          MARKER_EPOCH=$(progress_epoch_for_request "$MARKER_REQUEST")
-          if [ -z "$MARKER_EPOCH" ]; then
-            MARKER_CREATED=$(docker inspect "$MARKER_ID" 2>/dev/null |
-              awk -F'"' '$2 == "Created" { print $4; exit }')
-            MARKER_EPOCH=$(date -d "$MARKER_CREATED" +%s 2>/dev/null || true)
-          fi
-          if [ -n "$MARKER_EPOCH" ] && [ $((NOW - MARKER_EPOCH)) -gt 300 ]; then
-            docker rm -f "$MARKER_ID" >/dev/null 2>&1 || true
-          fi
-        done
-        LOCK_OWNER=$(docker inspect "$UPGRADE_LOCK_NAME" 2>/dev/null |
-          awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }' || true)
-        if [ -n "$LOCK_OWNER" ]; then
-          LOCK_EPOCH=$(progress_epoch_for_request "$LOCK_OWNER")
-          if [ -z "$LOCK_EPOCH" ] || [ $((NOW - LOCK_EPOCH)) -gt 300 ]; then
-            docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
-          fi
-        fi
-        for PROGRESS_ID in $(docker ps -aq --no-trunc --filter "label=$UPGRADE_PROGRESS_LABEL=true" 2>/dev/null); do
-          PROGRESS_NAME=$(docker inspect "$PROGRESS_ID" 2>/dev/null |
-            awk -F'"' '$2 == "Name" { sub("^/", "", $4); print $4; exit }')
-          PROGRESS_EPOCH=$(printf '%s' "$PROGRESS_NAME" | sed -n 's/.*-u\([0-9][0-9]*\)$/\1/p')
-          if [ -n "$PROGRESS_EPOCH" ] && [ $((NOW - PROGRESS_EPOCH)) -gt 300 ]; then
-            docker rm -f "$PROGRESS_ID" >/dev/null 2>&1 || true
-          fi
-        done
-      }
-
+      # Never revoke a lock based on heartbeat age. Slow I/O is not proof that
+      # its owner has stopped. Orphaned markers require verified operator cleanup.
       acquire_upgrade_slot() {
         if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
-          echo "[setup] host Docker coordinator unavailable; continuing with idle I/O priority"
-          return 0
+          echo "[setup] ERROR: shared Docker coordinator unavailable; refusing rootfs rebuild" >&2
+          return 1
         fi
-        REQUEST_ID="${LAZYCAT_APP_DEPLOY_UID:-unknown}-${CURRENT_ID}"
+        REQUEST_ID="${LAZYCAT_APP_DEPLOY_UID:-unknown}-${CURRENT_ID}-$(cat /proc/sys/kernel/random/uuid)"
         INSTANCE_ID="${LAZYCAT_APP_DOMAIN:-${LAZYCAT_APP_DEPLOY_UID:-unknown}}"
         REQUEST_HASH=$(printf '%s' "$REQUEST_ID" | md5sum | cut -c1-16)
         UPGRADE_QUEUE_NAME="hermes-studio-rootfs-wait-$REQUEST_HASH"
-        LOCK_IMAGE=$CURRENT_IMAGE
+        LOCK_IMAGE=$UPGRADE_COORDINATOR_IMAGE
         if ! docker image inspect "$LOCK_IMAGE" >/dev/null 2>&1; then
-          echo "[setup] current image is unavailable to the upgrade coordinator; continuing with idle I/O priority"
-          UPGRADE_QUEUE_NAME=
-          return 0
+          echo "[setup] fetching small shared upgrade coordinator image: $LOCK_IMAGE"
+          if ! docker pull "$LOCK_IMAGE"; then
+            echo "[setup] ERROR: coordinator image unavailable; refusing rootfs rebuild" >&2
+            return 1
+          fi
         fi
-        cleanup_stale_upgrade_markers
-        for OLD_ID in $(docker ps -aq --no-trunc \
-          --filter "label=$UPGRADE_QUEUE_LABEL=true" \
-          --filter "label=community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" 2>/dev/null); do
-          docker rm -f "$OLD_ID" >/dev/null 2>&1 || true
-        done
-        for OLD_ID in $(docker ps -aq --no-trunc \
-          --filter "label=$UPGRADE_PROGRESS_LABEL=true" \
-          --filter "label=community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" 2>/dev/null); do
-          docker rm -f "$OLD_ID" >/dev/null 2>&1 || true
-        done
-        LOCK_OWNER=$(docker inspect "$UPGRADE_LOCK_NAME" 2>/dev/null |
-          awk -F'"' '$2 == "community.lazycat.app.hermes.upgrade.request" { print $4; exit }' || true)
-        if [ "$LOCK_OWNER" = "$REQUEST_ID" ]; then
-          docker rm -f "$UPGRADE_LOCK_NAME" >/dev/null 2>&1 || true
-        fi
-        UPGRADE_QUEUE_ID=$(docker run -d --rm --name "$UPGRADE_QUEUE_NAME" \
+        # Use a unique attempt ID: never remove another attempt's lock/markers.
+        UPGRADE_LOCK_BACKEND=docker
+        UPGRADE_QUEUE_ID=$(docker run -d --name "$UPGRADE_QUEUE_NAME" \
           --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
           --label "$UPGRADE_QUEUE_LABEL=true" \
           --label "community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" \
           --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
           --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
-          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' 2>/dev/null) || true
+          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'while :; do sleep 3600; done' 2>/dev/null) || true
         if [ -z "$UPGRADE_QUEUE_ID" ]; then
-          echo "[setup] unable to register upgrade queue entry; continuing with idle I/O priority"
+          echo "[setup] ERROR: unable to register upgrade queue; refusing rootfs rebuild" >&2
           UPGRADE_QUEUE_NAME=
-          return 0
+          return 1
         fi
-        UPGRADE_PROGRESS_ID=$(docker run -d --rm \
+        UPGRADE_PROGRESS_ID=$(docker run -d \
           --name "hermes-studio-rootfs-progress-$REQUEST_HASH-waiting-p000-c0-t0-u$(date +%s)" \
           --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
           --label "$UPGRADE_PROGRESS_LABEL=true" \
           --label "community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" \
           --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
           --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
-          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' 2>/dev/null) || true
+          --entrypoint /bin/sh "$LOCK_IMAGE" -c 'while :; do sleep 3600; done' 2>/dev/null) || true
         if [ -z "$UPGRADE_PROGRESS_ID" ]; then
           docker rm -f "$UPGRADE_QUEUE_ID" >/dev/null 2>&1 || true
           UPGRADE_QUEUE_ID=
-          echo "[setup] unable to register upgrade progress; continuing with idle I/O priority"
-          return 0
+          echo "[setup] ERROR: unable to register upgrade progress; refusing rootfs rebuild" >&2
+          return 1
         fi
         start_progress_heartbeat
         UPGRADE_LOCK_BACKEND=docker
         WAIT_COUNT=0
         while :; do
-          cleanup_stale_upgrade_markers
+          if ! docker info >/dev/null 2>&1; then
+            echo "[setup] ERROR: coordinator lost while waiting; refusing rootfs rebuild" >&2
+            return 1
+          fi
           FIRST_WAITING=$(
             for WAITING_ID in $(docker ps -aq --no-trunc --filter "label=$UPGRADE_QUEUE_LABEL=true" 2>/dev/null); do
               WAITING_CREATED=$(docker inspect "$WAITING_ID" 2>/dev/null |
@@ -283,13 +231,13 @@ services:
             done | sort | head -n1 | awk '{print $NF}'
           )
           if [ "$FIRST_WAITING" = "$UPGRADE_QUEUE_ID" ]; then
-            if docker run -d --rm --name "$UPGRADE_LOCK_NAME" \
+            if docker run -d --name "$UPGRADE_LOCK_NAME" \
               --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
               --label "community.lazycat.app.hermes.upgrade.active=true" \
               --label "community.lazycat.app.hermes.upgrade.request=$REQUEST_ID" \
               --label "community.lazycat.app.hermes.upgrade.instance=$INSTANCE_ID" \
               --label "community.lazycat.app.hermes.upgrade.user=${LAZYCAT_USER_ID:-}" \
-              --entrypoint /bin/sh "$LOCK_IMAGE" -c 'sleep 43200' >/dev/null 2>&1; then
+              --entrypoint /bin/sh "$LOCK_IMAGE" -c 'while :; do sleep 3600; done' >/dev/null 2>&1; then
               docker rm -f "$UPGRADE_QUEUE_ID" >/dev/null 2>&1 || true
               UPGRADE_QUEUE_ID=
               write_progress calculating 0 0 0
@@ -347,11 +295,13 @@ services:
       fi
 
       if [ "$NEED_SNAPSHOT" = "1" ]; then
-        acquire_upgrade_slot
-        trap 'release_upgrade_slot' EXIT
-        trap 'release_upgrade_slot; exit 130' INT
-        trap 'release_upgrade_slot; exit 143' TERM
-        mkdir -p "$BASE"
+        # No EXIT/signal auto-release: a child doing I/O can outlive this shell.
+        # Retain the lock on failure and release only after successful completion.
+        if ! acquire_upgrade_slot; then
+          echo "[setup] ERROR: no upgrade slot; rootfs left untouched" >&2
+          exit 1
+        fi
+        mkdir -p "$BASE" || exit 1
         SNAPSHOT_SIZES=/tmp/hermes-rootfs-sizes
         : > "$SNAPSHOT_SIZES"
         TOTAL_BYTES=0
@@ -371,8 +321,8 @@ services:
             DIR_BYTES=${DIR_BYTES:-0}
             PERCENT=$((TOTAL_BYTES > 0 ? COMPLETED_BYTES * 100 / TOTAL_BYTES : 0))
             write_progress "cleanup-$d" "$PERCENT" "$COMPLETED_BYTES" "$TOTAL_BYTES"
-            run_idle rm -rf "$BASE/$d"
-            mkdir -p "$BASE/$d"
+            run_idle rm -rf "$BASE/$d" || exit 1
+            mkdir -p "$BASE/$d" || exit 1
             echo "[setup] snapshotting /$d with idle I/O priority..."
             if command -v ionice >/dev/null 2>&1; then
               ionice -c 3 nice -n 15 cp -a "/$d/." "$BASE/$d/" &
@@ -390,7 +340,10 @@ services:
               write_progress "copy-$d" "$PERCENT" "$CURRENT_BYTES" "$TOTAL_BYTES"
               sleep 10
             done
-            wait "$COPY_PID"
+            if ! wait "$COPY_PID"; then
+              echo "[setup] ERROR: snapshot copy failed; retaining upgrade lock and old fingerprint" >&2
+              exit 1
+            fi
             COMPLETED_BYTES=$((COMPLETED_BYTES + DIR_BYTES))
             PERCENT=$((TOTAL_BYTES > 0 ? COMPLETED_BYTES * 100 / TOTAL_BYTES : 0))
             write_progress "copy-$d" "$PERCENT" "$COMPLETED_BYTES" "$TOTAL_BYTES"
@@ -398,12 +351,11 @@ services:
           fi
         done
         rm -f "$SNAPSHOT_SIZES"
-        echo "$CURRENT_ID" > "$ROOTFS/.image-id"
-        echo "$CURRENT_IMAGE" > "$ROOTFS/.image-ref"
+        echo "$CURRENT_ID" > "$ROOTFS/.image-id" || exit 1
+        echo "$CURRENT_IMAGE" > "$ROOTFS/.image-ref" || exit 1
         write_progress completed 100 "$TOTAL_BYTES" "$TOTAL_BYTES"
         echo "[setup] base snapshot done"
         release_upgrade_slot
-        trap - EXIT INT TERM
       fi
 
       # --- Sync container-generated files (Docker writes each boot) ---
