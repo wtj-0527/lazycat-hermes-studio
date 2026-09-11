@@ -1,3 +1,14 @@
+# 2026.09.11.0950（Hermes Studio main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` `main@528934a6dc2659e4ae4d04e2129721de9eaaae9a`（Studio 0.7.19）构建，不携带任何未合并 PR。
+- Pi 与 `pi-mcp-adapter` 改为跟随兼容版本范围，不再精确固定版本。
+- 当用户自行安装 Pi 时，跳过内置 `pi-mcp-adapter`，避免重复加载或覆盖用户配置。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.19-main-528934a6-202609110950`。
+- 远端镜像 digest：`sha256:91c168694d295bdc0f9d4d8f8dab691a7d068fd9cf94702d8712e74f08a03942`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装或重启现有实例。
+
+---
+
 ## Rootfs upgrade coordinator fail-closed
 
 - Use an independent small coordinator image on the shared playground Docker.
