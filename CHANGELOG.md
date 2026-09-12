@@ -1,3 +1,16 @@
+# 2026.09.12.1222（Hermes Studio main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` `main@6e9e687177c3fe2e2bbd060037d3addea812fd5e`（Studio 0.7.20）构建，不携带任何未合并 PR。
+- 新增 DeepSeek Harness（DSH）安装管理，并接入单聊、群聊、工作流、Web 插件及 Agent 预设。
+- Docker 中通过 Studio 安装的 Coding Agent 现在随数据卷持久化，容器重建或升级后不再丢失。
+- 修复全局 Coding Agent、Grok 用量与模型归属，以及 Hermes Agent 0.21+ 审批会话关联。
+- 更新 apikey 默认域名并迁移旧端点；同步 Pi 适配器策略、OpenCode 命令及 Linux 图标改进。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.20-main-6e9e6871-202609121222`。
+- 远端镜像 digest：`sha256:108be1c175d1b0847d944db3b313de4dfeb6b3e9d432bc216de89541a6c7b4f7`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装或重启现有实例。
+
+---
+
 # 2026.09.11.0950（Hermes Studio main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` `main@528934a6dc2659e4ae4d04e2129721de9eaaae9a`（Studio 0.7.19）构建，不携带任何未合并 PR。
