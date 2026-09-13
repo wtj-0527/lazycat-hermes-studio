@@ -1,3 +1,14 @@
+# 2026.09.13.0654（Hermes Studio 0.7.21 + PR #3031）
+
+- 基于 `EKKOLearnAI/hermes-studio` `main@39b2e4477500fb97ccfc356868533775743e0629`（Studio 0.7.21），并集成待上游审批的 PR #3031 exact HEAD `b45452fa8e1b43508ba8123d5b0911d32f24497e`。
+- 修复 Ekko MCP 配置保存兼容性：`http`、`streamable-http`、`streamableHttp` 与 `streamablehttp` 会规范化为 `streamable_http`，不再返回 400。
+- 继续拒绝旧式 `sse`，避免将不同协议错误映射为 Streamable HTTP。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.21-pr3031-b45452fa-202609130654`。
+- 远端镜像 digest：`sha256:e7795e43d4abfa4cecb093cb548400676d26cc39dd22b3ce99bb5ab10acdf05b`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装或重启现有实例。
+
+---
+
 # 2026.09.12.1222（Hermes Studio main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` `main@6e9e687177c3fe2e2bbd060037d3addea812fd5e`（Studio 0.7.20）构建，不携带任何未合并 PR。
