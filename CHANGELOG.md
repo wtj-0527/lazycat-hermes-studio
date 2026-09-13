@@ -1,3 +1,22 @@
+# 2026.09.13.1705（LazyCat MCP Ticket 自动恢复）
+
+- 移除包装层自定义的 15 分钟 Ticket TTL；Ticket 仍只保存在当前
+  `lazycat-ticket-lease` 进程内存中，不写入磁盘、配置、Catalog、日志或响应。
+- 参考 `lazycat-mcp` 的按请求捕获方式，通过 Nginx 非阻塞镜像每个正常
+  Hermes Studio 请求，并使用其中由 LazyCat ingress 注入的当前用户身份
+  刷新内存 Ticket。
+- sidecar 或应用重启仍会安全清空内存 Ticket，但用户下一次访问 Studio、
+  发送消息或调用 API 时会自动恢复，不再依赖页面定时器存活。
+- 保留页面首次加载与每五分钟主动捕获作为兼容兜底；重复捕获相同 Ticket
+  不再产生续租日志。
+- 继续拒绝跨用户替换、调用方伪造身份头和未知 MCP 目标；被动捕获失败不会
+  阻断 Hermes Studio 页面或 API。
+- 运行镜像保持
+  `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.21-pr3031-b45452fa-202609130654`
+  不变，本次仅更新 LazyCat 包装层。
+
+---
+
 # 2026.09.13.0654（Hermes Studio 0.7.21 + PR #3031）
 
 - 基于 `EKKOLearnAI/hermes-studio` `main@39b2e4477500fb97ccfc356868533775743e0629`（Studio 0.7.21），并集成待上游审批的 PR #3031 exact HEAD `b45452fa8e1b43508ba8123d5b0911d32f24497e`。

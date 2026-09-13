@@ -27,7 +27,6 @@ services:
     environment:
       - SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock
       - SOCKET_GID=101
-      - LEASE_TTL_MS=900000
       - CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json
     binds:
       - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime

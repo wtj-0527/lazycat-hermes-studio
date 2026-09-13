@@ -5,7 +5,6 @@ import { chmodSync, chownSync, readFileSync, rmSync } from 'node:fs'
 import { pipeline } from 'node:stream'
 
 const port = Number(process.env.PORT || 8787)
-const ttlMs = Number(process.env.LEASE_TTL_MS || 15 * 60 * 1000)
 const socketPath = process.env.SOCKET_PATH || ''
 const socketGid = Number(process.env.SOCKET_GID || 101)
 const testLoopback = process.env.TEST_ALLOW_LOOPBACK === '1'
@@ -182,10 +181,7 @@ function stripHopByHop(input) {
 }
 
 function currentTicket() {
-  if (!lease || Date.now() >= lease.expiresAt) {
-    lease = null
-    return null
-  }
+  if (!lease) return null
   return lease.ticket
 }
 
@@ -205,21 +201,30 @@ function logCapture(event, state) {
   )
 }
 
-function capture(req, res) {
+function noContent(res) {
+  res.writeHead(204, { 'Cache-Control': 'no-store' })
+  res.end()
+}
+
+function capture(req, res, passive = false) {
   const source = req.headers['x-hc-source']
   const ticket = req.headers['x-hc-user-ticket']
   const userId = req.headers['x-hc-user-id']
   const state = captureState(source, ticket, userId)
   if (!state.sourceClient || !state.ticketPresent || !state.userPresent) {
+    if (passive) return noContent(res)
     logCapture('capture.rejected', state)
     return send(res, 403)
   }
-  if (lease && Date.now() < lease.expiresAt && lease.userId !== userId) return send(res, 409)
-  const renewed = Boolean(lease && Date.now() < lease.expiresAt && lease.userId === userId)
-  lease = { ticket, userId, expiresAt: Date.now() + ttlMs }
-  logCapture(renewed ? 'capture.renewed' : 'capture.accepted', state)
-  res.writeHead(204, { 'Cache-Control': 'no-store' })
-  res.end()
+  if (lease && lease.userId !== userId) {
+    if (passive) return noContent(res)
+    return send(res, 409)
+  }
+  const accepted = !lease
+  const renewed = Boolean(lease && lease.ticket !== ticket)
+  lease = { ticket, userId }
+  if (accepted || renewed) logCapture(renewed ? 'capture.renewed' : 'capture.accepted', state)
+  return noContent(res)
 }
 
 async function visibleApps(req, res) {
@@ -265,6 +270,7 @@ function proxy(req, res) {
 const server = http.createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') return send(res, 200, 'ok')
   if (req.method === 'POST' && req.url === '/internal/capture') return capture(req, res)
+  if (req.method === 'POST' && req.url === '/internal/capture-passive') return capture(req, res, true)
   if (req.method === 'GET' && req.url === '/internal/visible-apps') return visibleApps(req, res)
   if (req.url === '/internal/proxy') return proxy(req, res)
   return send(res, 404)

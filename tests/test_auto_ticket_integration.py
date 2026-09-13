@@ -16,6 +16,7 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh", manifest)
         self.assertIn("SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock", manifest)
         self.assertIn("CATALOG_FILE=/lzcapp/var/mcp-runtime/providers.json", manifest)
+        self.assertNotIn("LEASE_TTL_MS=", manifest)
         self.assertNotIn("LAZYCAT_USER_ID=", manifest)
         self.assertIn("LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime", manifest)
         self.assertIn("Never construct or override the gateway address", manifest)
@@ -47,6 +48,11 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertIn("location = /lazycat-mcp/capture", nginx)
         self.assertIn("proxy_pass http://unix:/lzcapp/var/mcp-runtime/lease.sock:/internal/capture", nginx)
         self.assertIn("proxy_set_header X-HC-USER-TICKET $http_x_hc_user_ticket", nginx)
+        self.assertIn("location = /lazycat-mcp/capture-passive", nginx)
+        self.assertIn("proxy_pass http://unix:/lzcapp/var/mcp-runtime/lease.sock:/internal/capture-passive", nginx)
+        self.assertIn("proxy_method POST", nginx)
+        self.assertIn("mirror /lazycat-mcp/capture-passive", nginx)
+        self.assertIn("mirror_request_body off", nginx)
         self.assertIn("location = /lazycat-mcp/bootstrap.js", nginx)
         self.assertIn("sub_filter '</head>'", nginx)
         self.assertIn('script type="module"', nginx)
@@ -101,6 +107,16 @@ class AutoTicketIntegrationContract(unittest.TestCase):
         self.assertNotIn("config.yaml", script)
         self.assertNotIn("X-HC-USER-TICKET", script)
         self.assertNotIn("document.cookie", script)
+
+    def test_ticket_lifetime_is_bound_to_the_sidecar_process_not_a_timer(self):
+        lease = (ROOT / "content" / "lazycat-ticket-lease.mjs").read_text()
+        manifest = (ROOT / "lzc-manifest.yml").read_text()
+        self.assertNotIn("LEASE_TTL_MS", lease)
+        self.assertNotIn("expiresAt", lease)
+        self.assertNotIn("ttlMs", lease)
+        self.assertNotIn("LEASE_TTL_MS=", manifest)
+        self.assertIn("if (!lease) return null", lease)
+        self.assertIn("/internal/capture-passive", lease)
 
 
 if __name__ == "__main__":

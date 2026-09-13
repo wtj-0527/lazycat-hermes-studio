@@ -22,6 +22,10 @@ Hermes AI 智能体 Web 管理界面 — 全 rootfs 持久化
 当前包装将 Hermes Studio 普通附件上传上限配置为 500 MiB
 （`HERMES_MAX_UPLOAD_SIZE=524288000`）。nginx 包装层不额外限制请求体大小。
 
+LazyCat MCP 的用户 Ticket 仅保存在当前 sidecar 进程内存中，不写入磁盘。
+每个经过 Hermes Studio 的正常认证请求都会刷新该 Ticket；sidecar 重启后，
+用户下一次访问页面、发送消息或调用 API 即可自动恢复 MCP 授权。
+
 说明：当前 `/home/agent` 的主持久化路径是 `document.private` 对应的
 `/lzcapp/documents/{{ .S.DeployUID }}`。`setup_script` 里保留的
 `/lzcapp/var/home -> /home/agent` 迁移逻辑仅用于兼容旧版本历史数据，
