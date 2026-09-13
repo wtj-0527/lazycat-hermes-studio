@@ -114,7 +114,7 @@ For each selected Provider, use exactly its canonical URL:
 http://app.<package_id>.lzcx<endpoint>
 ```
 
-The installed wrapper captures the current instance user's `X-HC-USER-TICKET` from an authenticated Studio browser request and injects it into the `.lzcx` request. Do not read, print, persist, or manually construct the ticket. Do not call host-only commands such as `lpk-manager`; they are not available or required inside a user application instance.
+The installed wrapper captures the current instance user's `X-HC-USER-TICKET` from every authenticated Studio request and injects it into the `.lzcx` request. The ticket remains only in the current sidecar process memory; it has no wrapper-defined timer and is never persisted. Do not read, print, persist, or manually construct the ticket. Do not call host-only commands such as `lpk-manager`; they are not available or required inside a user application instance.
 
 Run MCP protocol verification independently after selection:
 

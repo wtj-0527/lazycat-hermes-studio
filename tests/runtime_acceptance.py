@@ -27,7 +27,7 @@ with tempfile.TemporaryDirectory() as td:
     lease_env=os.environ.copy()
     for name in ('NODE_OPTIONS','SOCKET_PATH','SOCKET_GID','LAZYCAT_USER_ID'):
         lease_env.pop(name,None)
-    lease_env.update({'PORT':str(lease_port),'LEASE_TTL_MS':'10000','CATALOG_FILE':str(runtime/'providers.json'),'TEST_ALLOW_LOOPBACK':'1','LAZYCAT_USER_ID':'u'})
+    lease_env.update({'PORT':str(lease_port),'CATALOG_FILE':str(runtime/'providers.json'),'TEST_ALLOW_LOOPBACK':'1','LAZYCAT_USER_ID':'u'})
     lease=subprocess.Popen(['node',str(ROOT/'content/lazycat-ticket-lease.mjs')],env=lease_env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
     try:
         for _ in range(50):

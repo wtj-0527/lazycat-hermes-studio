@@ -59,6 +59,7 @@ class TicketLeaseTest(unittest.TestCase):
         self.gateway_port = free_port()
         self.token = "lease-test-token"
         self.expected_log_fragments = []
+        self.unexpected_log_fragments = []
         self.tempdir = tempfile.TemporaryDirectory()
         self.gateway_seen = Path(self.tempdir.name) / "gateway-seen.json"
         self.gateway_mode = Path(self.tempdir.name) / "gateway-mode.txt"
@@ -113,7 +114,6 @@ server.listen(port, '127.0.0.1')
             env.pop(name, None)
         env.update({
             "PORT": str(self.port),
-            "LEASE_TTL_MS": "250",
             "ALLOWED_HOST_SUFFIX": ".lzcx",
             "TEST_ALLOW_LOOPBACK": "1",
             "LZCAPP_API_GATEWAY_ADDRESS": f"127.0.0.1:{self.gateway_port}",
@@ -160,6 +160,8 @@ server.listen(port, '127.0.0.1')
         self.assertNotIn("secret-user-B", output)
         for fragment in self.expected_log_fragments:
             self.assertIn(fragment, output)
+        for fragment in self.unexpected_log_fragments:
+            self.assertNotIn(fragment, output)
 
     @property
     def target(self):
@@ -235,11 +237,36 @@ server.listen(port, '127.0.0.1')
         seen_headers = {key.lower(): value for key, value in UpstreamHandler.seen[-1][1].items()}
         self.assertEqual(seen_headers["x-hc-user-ticket"], "secret-ticket-A")
 
-    def test_ticket_expires_and_is_not_reused(self):
+    def test_ticket_remains_available_for_process_lifetime(self):
         self.capture()
         time.sleep(0.35)
+        self.assertEqual(self.proxy()[0], 200)
+        self.assertEqual(len(UpstreamHandler.seen), 1)
+
+    def test_passive_capture_never_blocks_the_studio_request(self):
+        status, _, body = request(self.port, "POST", "/internal/capture-passive")
+        self.assertEqual(status, 204)
+        self.assertEqual(body, b"")
         self.assertEqual(self.proxy()[0], 428)
-        self.assertEqual(UpstreamHandler.seen, [])
+
+        status, _, body = request(self.port, "POST", "/internal/capture-passive", {
+            "X-HC-USER-TICKET": "secret-ticket-A",
+            "X-HC-User-ID": "user-a",
+            "X-HC-SOURCE": "client",
+        })
+        self.assertEqual(status, 204)
+        self.assertEqual(body, b"")
+        self.assertEqual(self.proxy()[0], 200)
+
+    def test_repeated_same_ticket_capture_does_not_spam_renewal_logs(self):
+        self.assertEqual(self.capture()[0], 204)
+        self.assertEqual(self.capture()[0], 204)
+        self.expected_log_fragments.append(
+            "capture.accepted source_client=true ticket_present=true user_present=true"
+        )
+        self.unexpected_log_fragments.append(
+            "capture.renewed source_client=true ticket_present=true user_present=true"
+        )
 
     def test_provider_401_does_not_revoke_ticket_for_other_providers(self):
         self.capture()
