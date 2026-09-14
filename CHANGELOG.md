@@ -1,3 +1,14 @@
+# 2026.09.14.1144（Hermes Studio 0.7.21 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@06cd59436c2f520a32ae6bd02f27d2c7e3229ce4`（Studio 0.7.21）构建，不携带任何未合并 PR。
+- 包含已合并 PR #3038：为 Studio 生成的 DSH 插件 manifest 补齐版本字段，修复全局 DSH 会话在请求扩展准备阶段失败。
+- 包含已合并 PR #3044：Coding Agent 启动统一补全 npm 全局 `bin` 路径，修复已安装 Codex 等 Agent 仍报 `spawn ... ENOENT`；Agent 确实未安装时改为可操作的友好提示。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.21-main-06cd5943-202609141144`。
+- 远端镜像 digest：`sha256:f999715184530a7a3eb2215226801d8cec1e6aa47aa0d48f0c0a023b76a48aeb`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.14.0041（Hermes Studio 0.7.21 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@4a81f50ceec5510386b6503c9f7aa4e04bee75e6`（Studio 0.7.21）构建，不携带任何未合并 PR。
