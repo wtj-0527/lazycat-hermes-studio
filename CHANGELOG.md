@@ -1,3 +1,14 @@
+# 2026.09.14.0041（Hermes Studio 0.7.21 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@4a81f50ceec5510386b6503c9f7aa4e04bee75e6`（Studio 0.7.21）构建，不携带任何未合并 PR。
+- 包含已合并的 PR #3033：全局 Claude Code 会话由 Studio 在每轮运行前解析并注入最新 Claude OAuth access token，Studio 继续作为授权与刷新唯一管理方。
+- 保留 main 已包含的 Ekko MCP HTTP transport alias 兼容修复（PR #3031）。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.21-main-4a81f50c-202609140041`。
+- 远端镜像 digest：`sha256:0374614a1cad51ceaa4ce57f709ca4b409de8817151b906f1b57449454133274`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装或重启现有实例。
+
+---
+
 # 2026.09.13.1705（LazyCat MCP Ticket 自动恢复）
 
 - 移除包装层自定义的 15 分钟 Ticket TTL；Ticket 仍只保存在当前
