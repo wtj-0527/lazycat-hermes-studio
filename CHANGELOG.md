@@ -1,3 +1,16 @@
+# 2026.09.15.2051（Hermes Studio 0.7.21 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@d692027e25b189b4ed031ef00c2e8183cb82798d`（Studio 0.7.21）构建，不携带任何未合并 PR。
+- 新增独立 Task Plan MCP 与逐轮上下文同步（PR #3053），并修复全局 Coding Agent 启动时 Studio MCP 注入（PR #3055）。
+- Agent Bridge 的 Unix socket 路径过长时自动回退 TCP（PR #3048）；修复 apikey 域名环境变量替换跨行匹配（PR #3046）。
+- 聊天思考状态显示 Agent logo（PR #3052），OpenRouter 请求与模型目录统一使用 Ekko Studio attribution（PR #3056）。
+- 同步刷新 OpenAPI schema（PR #3054）。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.21-main-d692027e-202609152051`。
+- 远端镜像 digest：`sha256:a3515d1e520785021a44cd625209c3b0c1a6a2349d70f2fe4e03175c77f0a4de`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.14.1144（Hermes Studio 0.7.21 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@06cd59436c2f520a32ae6bd02f27d2c7e3229ce4`（Studio 0.7.21）构建，不携带任何未合并 PR。
