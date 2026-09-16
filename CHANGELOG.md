@@ -1,3 +1,15 @@
+# 2026.09.16.2048（Hermes Studio 0.7.22 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@b036cf24479a652559ea19e48143069e8596b61e`（Studio 0.7.22）构建，不携带任何未合并 PR。
+- Hermes runtime browser bundle 新增完整性验证，并保留 desktop latest 资源（PR #3073）。
+- Grok runtime config 保留多行配置值（PR #3072），DeepSeek reasoning replay 保留推理内容（PR #3078）。
+- App relay 新增持久移动终端会话（PR #3076），Studio 升级至 0.7.22（PR #3075）。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-main-b036cf24-202609162048`。
+- 远端镜像 digest：`sha256:2b0cc957bad5e05d61a94fe59b4821fdb38a86e0f0135e5cdfcf3e801688dc19`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.15.2051（Hermes Studio 0.7.21 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@d692027e25b189b4ed031ef00c2e8183cb82798d`（Studio 0.7.21）构建，不携带任何未合并 PR。
