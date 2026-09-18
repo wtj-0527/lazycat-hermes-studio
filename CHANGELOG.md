@@ -1,3 +1,14 @@
+# 2026.09.18.1622（Hermes Studio 0.7.22 + PR #3095）
+
+- 基于 `EKKOLearnAI/hermes-studio` `main@516361c49589f7eb9f7f57fbcc6a2e5615096603`（Studio 0.7.22），并集成待上游审批的 PR #3095 exact HEAD `f34138e789d96c2f072a064387fbeada9de1a1f3`。
+- 修复 Claude Code 在 root 环境使用 `--permission-mode auto` 时，任务计划更新工具会被权限分类器误拦截的问题。
+- 仅精确允许 `mcp__ekko-studio-interaction__ekko_studio_update_plan`；其他 MCP 写操作不额外放行，非 root 与 Windows 启动行为保持不变。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3095-f34138e7-202609181622`。
+- 远端镜像 digest：`sha256:bd1976e29d77e41b8814f834161af9e9d3d9747525db23e8f7342800b5224737`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.18.1332（Hermes Studio 0.7.22 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@516361c49589f7eb9f7f57fbcc6a2e5615096603`（Studio 0.7.22）构建，不携带任何未合并 PR。
