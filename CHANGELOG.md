@@ -1,3 +1,13 @@
+# 2026.09.18.2359（Hermes Studio 0.7.22 + PR #3101）
+
+- 更新至 `EKKOLearnAI/hermes-studio` PR #3101 exact HEAD `9a02b179e`。
+- 明确区分社交消息目标与移动端 APNs 目标：未配置 Telegram、飞书或微信目标时不再输出误导性的 `no active target` 警告。
+- 新增安全的 `[run-push] target bound` 日志，仅记录平台和 snapshot 是否存在，便于完整自动推送验收，不记录凭据或设备标识。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3101-9a02b179-202609181604`。
+- 远端镜像 digest：`sha256:e0ccd91fa734ccbff522d83d8e3b948d498679e6dc5daf1fd682f6dc1f32cd7d`（`linux/amd64`）。
+
+---
+
 # 2026.09.18.2338（Hermes Studio 0.7.22 + PR #3101）
 
 - 基于 `EKKOLearnAI/hermes-studio` PR #3101 exact HEAD `29adfe78d9c7b8ec8d2e757beec3ca395ca9d283`，为 iOS `/push/v1/send` 的网络错误、408、429 与 5xx 增加有界重试。
