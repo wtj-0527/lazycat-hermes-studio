@@ -20,7 +20,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   lazycat-ticket-lease:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3095-f34138e7-202609181622
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3101-29adfe78-202609182321
     entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
     # LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime into this
     # application service. Never construct or override the gateway address.
@@ -32,7 +32,7 @@ services:
       - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3095-f34138e7-202609181622
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3101-29adfe78-202609182321
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/livez"]
       interval: 15s
@@ -84,6 +84,7 @@ services:
       UPGRADE_PROGRESS_ID=
       UPGRADE_HEARTBEAT_PID=
       PROGRESS_STATE=/tmp/hermes-rootfs-progress
+      UPGRADE_LOCAL_LOCK_FILE=/lzcapp/cache/rootfs-upgrade.lock
 
       run_idle() {
         if command -v ionice >/dev/null 2>&1; then
@@ -169,10 +170,28 @@ services:
 
       # Never revoke a lock based on heartbeat age. Slow I/O is not proof that
       # its owner has stopped. Orphaned markers require verified operator cleanup.
+      acquire_local_upgrade_slot() {
+        if ! command -v flock >/dev/null 2>&1; then
+          echo "[setup] ERROR: neither Docker coordinator nor flock is available" >&2
+          return 1
+        fi
+        mkdir -p "$(dirname "$UPGRADE_LOCAL_LOCK_FILE")" || return 1
+        exec 9>"$UPGRADE_LOCAL_LOCK_FILE" || return 1
+        echo "[setup] shared Docker coordinator unavailable; waiting for instance-local upgrade lock"
+        if ! flock 9; then
+          exec 9>&-
+          return 1
+        fi
+        UPGRADE_LOCK_BACKEND=flock
+        write_progress calculating 0 0 0
+        echo "[setup] acquired instance-local upgrade lock"
+        return 0
+      }
+
       acquire_upgrade_slot() {
         if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
-          echo "[setup] ERROR: shared Docker coordinator unavailable; refusing rootfs rebuild" >&2
-          return 1
+          acquire_local_upgrade_slot
+          return $?
         fi
         REQUEST_ID="${LAZYCAT_APP_DEPLOY_UID:-unknown}-${CURRENT_ID}-$(cat /proc/sys/kernel/random/uuid)"
         INSTANCE_ID="${LAZYCAT_APP_DOMAIN:-${LAZYCAT_APP_DEPLOY_UID:-unknown}}"
@@ -261,6 +280,10 @@ services:
           [ -n "$UPGRADE_PROGRESS_ID" ] && docker rm -f "$UPGRADE_PROGRESS_ID" >/dev/null 2>&1 || true
           [ -n "$UPGRADE_HEARTBEAT_PID" ] && kill "$UPGRADE_HEARTBEAT_PID" 2>/dev/null || true
           echo "[setup] released host-wide upgrade slot"
+        elif [ "$UPGRADE_LOCK_BACKEND" = flock ]; then
+          flock -u 9 >/dev/null 2>&1 || true
+          exec 9>&-
+          echo "[setup] released instance-local upgrade lock"
         fi
         UPGRADE_LOCK_BACKEND=
         UPGRADE_QUEUE_NAME=
@@ -294,8 +317,8 @@ services:
       fi
 
       if [ "$NEED_SNAPSHOT" = "1" ]; then
-        # No EXIT/signal auto-release: a child doing I/O can outlive this shell.
-        # Retain the lock on failure and release only after successful completion.
+        # The Docker backend intentionally retains its host-wide lock on failure.
+        # The flock fallback is process-scoped and releases automatically on exit.
         if ! acquire_upgrade_slot; then
           echo "[setup] ERROR: no upgrade slot; rootfs left untouched" >&2
           exit 1
