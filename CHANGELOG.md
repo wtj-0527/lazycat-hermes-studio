@@ -1,3 +1,16 @@
+# 2026.09.18.1332（Hermes Studio 0.7.22 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@516361c49589f7eb9f7f57fbcc6a2e5615096603`（Studio 0.7.22）构建，不携带任何未合并 PR。
+- Task Plan 固定显示在每轮末尾，并新增 agent-scoped interaction MCP 与群聊任务卡（PR #3080、#3085）。
+- 移动终端输出改为有界输入窗口；运行时兼容 HTTP MCP transport aliases，并修复 Skill frontmatter 跨字段污染（PR #3079、#3081、#3083）。
+- 新增 `ekko-studio` npm 发布与旧升级兼容；会话置顶状态持久化到数据库（PR #3084、#3091）。
+- App 通知恢复群聊活动与 clarification 快照，并持久化运行快照和通知进度事件（PR #3090、#3093）。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-main-516361c4-202609181332`。
+- 远端镜像 digest：`sha256:fd2dc743f9fd4ba56466acb190928c4e4a3b635f9f69c81e00dab1db074e87fc`。
+- 本次只发布镜像、LPK 与 GitHub Release，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.16.2048（Hermes Studio 0.7.22 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@b036cf24479a652559ea19e48143069e8596b61e`（Studio 0.7.22）构建，不携带任何未合并 PR。
