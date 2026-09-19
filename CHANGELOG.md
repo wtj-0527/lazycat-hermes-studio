@@ -1,3 +1,11 @@
+# 2026.09.19.0115（Hermes Studio 0.7.23 main）
+
+- 两个服务同步使用 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.23-main-f2dddd80-clickroute-202609190920`，源码基线为上游 `main@f2dddd80fe24643ce63743352135e538fccd3141`。
+- 保留 rootfs 升级 `flock` 回退：Docker coordinator 不可达时使用实例本地锁；不提供跨实例主机级排队。coordinator 可达但队列或锁创建失败时仍 fail-closed。
+- 以下 0.7.22 + PR #3101 条目为历史构建记录，不代表此版本当前镜像或推送机制。
+
+---
+
 # 2026.09.18.2359（Hermes Studio 0.7.22 + PR #3101）
 
 - 更新至 `EKKOLearnAI/hermes-studio` PR #3101 exact HEAD `9a02b179e`。
