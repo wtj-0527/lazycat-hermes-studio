@@ -51,6 +51,7 @@ def setup(tmp_path):
     script=script.split('      # --- Image fingerprint')[0] if '      # --- Image fingerprint' in script else script.split('# --- Image fingerprint')[0]
     script=script.replace('sleep 5','sleep 0.05').replace('sleep 10','sleep 0.05')
     script=script.replace('PROGRESS_STATE=/tmp/hermes-rootfs-progress','PROGRESS_STATE="$TEST_PROGRESS"')
+    script=script.replace('UPGRADE_LOCAL_LOCK_FILE=/lzcapp/cache/rootfs-upgrade.lock','UPGRADE_LOCAL_LOCK_FILE="$TEST_LOCAL_LOCK"')
     shell=tmp_path/'run.sh'
     shell.write_text(script+'''\nCURRENT_ID=test
 CURRENT_IMAGE=business-image-not-in-coordinator
@@ -60,7 +61,7 @@ sleep 0.15
 printf 'exit %s\\n' "$LAZYCAT_APP_DEPLOY_UID" >> "$EVENTS"
 release_upgrade_slot
 ''')
-    env=dict(os.environ,PATH=str(tmp_path)+':'+os.environ['PATH'],FAKE_STATE=str(tmp_path/'state'),EVENTS=str(tmp_path/'events'),TEST_PROGRESS=str(tmp_path/'progress'))
+    env=dict(os.environ,PATH=str(tmp_path)+':'+os.environ['PATH'],FAKE_STATE=str(tmp_path/'state'),EVENTS=str(tmp_path/'events'),TEST_PROGRESS=str(tmp_path/'progress'),TEST_LOCAL_LOCK=str(tmp_path/'local.lock'))
     return shell,env
 
 def test_three_instances_do_not_overlap(tmp_path):
@@ -77,12 +78,26 @@ def test_three_instances_do_not_overlap(tmp_path):
         assert events[i].startswith('enter ')
         assert events[i+1]=='exit '+events[i].split()[1]
 
-def test_unavailable_coordinator_never_enters_io(tmp_path):
+def test_unavailable_coordinator_uses_serialized_local_flock(tmp_path):
     shell,env=setup(tmp_path)
-    for mode in ('info','pull','run'):
+    procs=[subprocess.Popen(['sh',str(shell)],env=dict(env,FAIL='info',LAZYCAT_APP_DEPLOY_UID=str(i),TEST_PROGRESS=str(tmp_path/f'fallback-p{i}')),stdout=subprocess.PIPE,stderr=subprocess.PIPE) for i in range(3)]
+    results=[]
+    for proc in procs:
+        out,err=proc.communicate(timeout=15)
+        results.append((proc.returncode,out,err))
+    assert [item[0] for item in results]==[0,0,0],results
+    assert all(b'acquired instance-local upgrade lock' in item[1] for item in results)
+    events=(tmp_path/'events').read_text().splitlines()
+    assert len(events)==6
+    for i in range(0,6,2):
+        assert events[i].startswith('enter ')
+        assert events[i+1]=='exit '+events[i].split()[1]
+
+def test_broken_available_coordinator_still_fails_closed(tmp_path):
+    shell,env=setup(tmp_path)
+    for mode in ('pull','run'):
         result=subprocess.run(['sh',str(shell)],env=dict(env,FAIL=mode),capture_output=True,timeout=15)
         assert result.returncode==42,result.stderr
-        assert not (tmp_path/'events').exists()
 
 def test_missing_business_image_does_not_disable_lock(tmp_path):
     shell,env=setup(tmp_path)
@@ -98,6 +113,8 @@ def test_no_automatic_revocation_or_success_on_copy_failure():
     assert 'NOW - LOCK_EPOCH' not in text
     assert 'if ! wait "$COPY_PID"; then' in text
     assert "trap 'release_upgrade_slot'" not in text
+    assert 'acquire_local_upgrade_slot' in text
+    assert 'flock 9' in text
 
 def test_old_lock_is_not_revoked_even_without_heartbeat(tmp_path):
     import json

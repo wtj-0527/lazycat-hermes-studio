@@ -1,3 +1,35 @@
+# 2026.09.19.0115（Hermes Studio 0.7.23 main）
+
+- 两个服务同步使用 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.23-main-f2dddd80-clickroute-202609190920`，源码基线为上游 `main@f2dddd80fe24643ce63743352135e538fccd3141`。
+- 保留 rootfs 升级 `flock` 回退：Docker coordinator 不可达时使用实例本地锁；不提供跨实例主机级排队。coordinator 可达但队列或锁创建失败时仍 fail-closed。
+- 以下 0.7.22 + PR #3101 条目为历史构建记录，不代表此版本当前镜像或推送机制。
+
+---
+
+# 2026.09.18.2359（Hermes Studio 0.7.22 + PR #3101）
+
+- 更新至 `EKKOLearnAI/hermes-studio` PR #3101 exact HEAD `9a02b179e`。
+- 明确区分社交消息目标与移动端 APNs 目标：未配置 Telegram、飞书或微信目标时不再输出误导性的 `no active target` 警告。
+- 新增安全的 `[run-push] target bound` 日志，仅记录平台和 snapshot 是否存在，便于完整自动推送验收，不记录凭据或设备标识。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3101-9a02b179-202609181604`。
+- 远端镜像 digest：`sha256:e0ccd91fa734ccbff522d83d8e3b948d498679e6dc5daf1fd682f6dc1f32cd7d`（`linux/amd64`）。
+
+---
+
+# 2026.09.18.2338（Hermes Studio 0.7.22 + PR #3101）
+
+- 基于 `EKKOLearnAI/hermes-studio` PR #3101 exact HEAD `29adfe78d9c7b8ec8d2e757beec3ca395ca9d283`，为 iOS `/push/v1/send` 的网络错误、408、429 与 5xx 增加有界重试。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.22-pr3101-29adfe78-202609182321`。
+- 远端镜像 digest：`sha256:1d55996e7d7134918caa0d2581c63c8780b5dfd04ba0aa0db4eaa6bc4d14f8ab`（`linux/amd64`）。
+
+- rootfs 镜像升级时，如果 LazyCat 初始化阶段暂时无法连接共享 Docker
+  coordinator，改用 `/lzcapp/cache` 上的进程级 `flock` 串行锁继续重建，
+  避免 `hermes-webui` 因 coordinator 不可用直接退出。
+- Docker coordinator 可用时仍保留原有主机级排队、进度心跳和失败保锁行为；
+  coordinator 已连接但创建队列或锁失败时继续 fail-closed。
+
+---
+
 # 2026.09.18.1622（Hermes Studio 0.7.22 + PR #3095）
 
 - 基于 `EKKOLearnAI/hermes-studio` `main@516361c49589f7eb9f7f57fbcc6a2e5615096603`（Studio 0.7.22），并集成待上游审批的 PR #3095 exact HEAD `f34138e789d96c2f072a064387fbeada9de1a1f3`。
