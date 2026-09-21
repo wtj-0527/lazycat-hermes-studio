@@ -1,3 +1,15 @@
+# 2026.09.21.1416（Hermes Studio 0.7.23 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@e7e4fdd8eb7f199d520d49a8ace74abee76b65f7`（Studio 0.7.23）构建，不携带任何未合并 PR。
+- 同步上游 20 个已合并变更：新增 iOS Live Activities 编排和 App 会话共享能力，完善共享语音与上下文权限，并恢复 Android 任务通知进度。
+- 修复 Coding Agent 原生压缩超限恢复与 interaction MCP 命名空间；模型设置按页面所选 Profile 过滤并保留会话推送偏好。
+- 通知内容预览默认启用并优先采用 Agent 最终回复；同时修复群聊历史清理恢复、头像和 DSH manifest 包身份。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.23-main-e7e4fdd8-202609211416`。
+- 远端镜像 digest：`sha256:0c7b0e2d9ad8b73060202b62e9cacfe3d33d1f2f608cef2bac139658d222ea5f`（`linux/amd64`）。
+- 本次只发布镜像和目标仓库配置，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.19.0115（Hermes Studio 0.7.23 main）
 
 - 两个服务同步使用 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.23-main-f2dddd80-clickroute-202609190920`，源码基线为上游 `main@f2dddd80fe24643ce63743352135e538fccd3141`。
