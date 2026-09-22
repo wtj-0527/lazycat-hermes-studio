@@ -1,3 +1,13 @@
+# 2026.09.22.1840（Hermes Studio 0.7.23 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@2ef4c445fba1a9717c45e45c491ecae610bd612e`（Studio 0.7.23）构建，不携带任何未合并 PR。
+- 同步上游 6 个已合并变更：Live Activities 推送携带 App 语言（#3152）、忽略旧会话推送 opt-out（#3151）、会话上传附件纳入共享文件访问（#3144）、仓库引用指向 ekko-studio（#3147）、隐藏社交推送入口并关闭事件投递（#3146）、保留附件消息生成标题（#3132）。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.23-main-2ef4c445-202609221840`。
+- 远端镜像 digest：`sha256:e5e05dc2becf21a2b8e618cf1c80ea124b636c03d2768dfa4ca54655b68ce24e`（`linux/amd64`）。
+- 本次只发布镜像和目标仓库配置，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.21.1416（Hermes Studio 0.7.23 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@e7e4fdd8eb7f199d520d49a8ace74abee76b65f7`（Studio 0.7.23）构建，不携带任何未合并 PR。
