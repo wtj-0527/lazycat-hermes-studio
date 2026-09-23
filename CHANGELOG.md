@@ -1,3 +1,13 @@
+# 2026.09.23.0955（Hermes Studio 0.7.24 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@8295cb43909a0ae4b53de285019c9335af3f736b`（Studio 0.7.24）构建，不携带任何未合并 PR。
+- 同步上游 5 个已合并变更：发布 Studio 0.7.24（#3153）、修复桌面包版本（#3154）、修复 DSH 依赖重复与启动诊断（#3156）、修复多 Studio 实例的 Hermes 托管 MCP 路由（#3157）、新增 JEV 设置页与共享评估客户端（#3159）。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.24-main-8295cb43-202609230955`。
+- 远端镜像 digest：`sha256:dd4a9df6e6bbafeac74e89846a426a52815e734428576b09303148e59d41021f`（`linux/amd64`）。
+- 本次只发布镜像和目标仓库配置，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.22.1840（Hermes Studio 0.7.23 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@2ef4c445fba1a9717c45e45c491ecae610bd612e`（Studio 0.7.23）构建，不携带任何未合并 PR。
