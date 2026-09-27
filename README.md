@@ -49,12 +49,12 @@ uv tool install <package>          # → ~/.local/bin/，重启不丢
 
 ## 自动化维护
 
-本仓库包含两个 GitHub Actions workflow：
+本仓库包含 LPK 自动构建 workflow：
 
-- `.github/workflows/check-hermes-studio-upgrade.yml`：每天北京时间 10:00 检查 Hermes Web UI 官方新版本，发现新版本后同步镜像到 ACR，并创建或更新升级 PR；不会自动合并。
-- `.github/workflows/release-lpk.yml`：PR 合并到 `main` 后自动打包 LPK、创建/更新 GitHub Release、上传 LPK 资产。
+- `.github/workflows/release-lpk.yml`：PR 修改打包文件时构建、校验并上传 30 天 artifact；合并到 `main` 后自动创建或更新 GitHub Release，并上传 LPK 与 SHA-256 文件；也支持手动触发并选择是否发布 Release。
+- workflow 固定使用 `@lazycatcloud/lzc-cli@2.0.9`，打包前验证 manifest 中的所有镜像可解析，打包后核对包名、版本、内容和镜像列表，发布后重新下载并校验 SHA-256。
 
-自动检查 workflow 需要配置以下 GitHub Secrets：
+私有 ACR 镜像需要配置以下 GitHub Secrets；公开镜像可不配置：
 
 - `ACR_REGISTRY`：例如 `registry.cn-shanghai.aliyuncs.com`
 - `ACR_NAMESPACE`：例如 `wtjking`
