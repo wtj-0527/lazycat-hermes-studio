@@ -1,3 +1,13 @@
+# 2026.09.30.1216（Hermes Studio 0.7.25 main）
+
+- 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@c8ea5ba069ec31524f77ae3ac2b0e65c398804b6`（Studio 0.7.25）构建，不携带任何未合并 PR。
+- 同步上游 0.7.25：新增 Cursor CLI 与 DSH 原生配置，增强浏览器批量操作、JEV 评估、标签页管理和大页面处理，并完善用量成本与模型价格/限额刷新。
+- `lazycat-ticket-lease` 与 `hermes-webui` 同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.25-main-c8ea5ba0-202609301216`。
+- 远端镜像 manifest digest：`sha256:4c9077fd3171f07b179fa499974c6dbbe182cb51aa56bf9893f62527375e63db`（`linux/amd64`）。
+- 本次只发布镜像和目标仓库配置，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.23.0955（Hermes Studio 0.7.24 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@8295cb43909a0ae4b53de285019c9335af3f736b`（Studio 0.7.24）构建，不携带任何未合并 PR。
