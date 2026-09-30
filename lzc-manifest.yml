@@ -53,7 +53,7 @@ services:
       - HERMES_WEB_UI_MODEL_RUN_JWT_EXPIRES_IN=12h
       - HERMES_WEB_UI_XAI_CALLBACK_BIND_HOST=0.0.0.0
       - HERMES_MAX_UPLOAD_SIZE=524288000
-      - PATH=/home/agent/.local/bin:/opt/hermes/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - PATH=/home/agent/.hermes-web-ui/coding-agent/npm/bin:/home/agent/.local/bin:/opt/hermes/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       - HERMES_ALLOW_ROOT_GATEWAY=1
       - LANG=C.UTF-8
       - LC_ALL=C.UTF-8
@@ -407,12 +407,13 @@ services:
       fi
 
 
-      # --- Ensure ~/.local/bin survives into login-shell PATH snapshots ---
-      for PROFILE in /home/agent/.profile /home/agent/.bash_profile; do
+      # --- Keep Studio-managed coding-agent CLIs and user-local tools on every shell PATH ---
+      CODING_AGENT_BIN=/home/agent/.hermes-web-ui/coding-agent/npm/bin
+      for PROFILE in /home/agent/.profile /home/agent/.bash_profile /home/agent/.bashrc; do
         touch "$PROFILE"
-        if ! grep -q '/home/agent/.local/bin' "$PROFILE" 2>/dev/null; then
-          printf '\n# LazyCat: ensure user-local CLI tools are on PATH\nexport PATH="/home/agent/.local/bin:$PATH"\n' >> "$PROFILE"
-          echo "[setup] PATH export added to $PROFILE"
+        if ! grep -Fq "$CODING_AGENT_BIN" "$PROFILE" 2>/dev/null; then
+          printf '\n# LazyCat: expose Studio-managed coding-agent CLIs\nexport PATH="%s:/home/agent/.local/bin:$PATH"\n' "$CODING_AGENT_BIN" >> "$PROFILE"
+          echo "[setup] coding-agent PATH export added to $PROFILE"
         fi
       done
 

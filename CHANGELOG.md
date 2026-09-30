@@ -1,3 +1,12 @@
+# 2026.09.30.1300（Coding Agent CLI PATH 修复）
+
+- 修复 LazyCat manifest 覆盖镜像 `PATH` 后遗漏 Studio 托管 npm bin 目录的问题。
+- 终端现在优先使用 `/home/agent/.hermes-web-ui/coding-agent/npm/bin` 中由 Agent Manager 管理的 Claude Code、Codex、Pi、Grok、OpenCode 与 DSH。
+- 同步写入 `.profile`、`.bash_profile` 和 `.bashrc`，确保登录 Shell 与交互式 Shell 在升级后均可直接执行这些命令；Cursor CLI 继续使用 `~/.local/bin/agent`。
+- 运行时镜像保持为 Studio 0.7.25 main `c8ea5ba0`，无需重建镜像。
+
+---
+
 # 2026.09.30.1216（Hermes Studio 0.7.25 main）
 
 - 严格基于 `EKKOLearnAI/hermes-studio` 最新 `main@c8ea5ba069ec31524f77ae3ac2b0e65c398804b6`（Studio 0.7.25）构建，不携带任何未合并 PR。
