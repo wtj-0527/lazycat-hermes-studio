@@ -1,3 +1,14 @@
+# 2026.10.01.1018（Ekko Studio 0.7.26 main）
+
+- 严格基于 `EKKOLearnAI/ekko-studio` 最新 `main@972030895c203f36de2328b9266913b857137683`（0.7.26）构建，不携带未合并 PR。
+- 同步导航与移动端布局、Gateway 启动控制、完成任务用量与 Token 速度展示、Grok/DeepSeek 角色兼容，以及 Coding Agent 上下文溢出恢复。
+- 两个 Studio 服务同步升级至 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.26-main-97203089-202610011010`，保留 rootfs 持久化、MCP 代理和 Coding Agent CLI PATH。
+- 镜像 manifest digest：`sha256:74ace69bc4c2c154a454821f517b19b9f3e807a80640d9227d303f96a26eacc8`（`linux/amd64`）。
+- 完整覆盖率测试：751 个测试文件通过、6865 项测试通过、14 项跳过；harness 和源码构建通过。
+- 本次仅发布镜像、LPK 和 GitHub Release，不自动安装、部署或重启现有实例。
+
+---
+
 # 2026.09.30.1300（Coding Agent CLI PATH 修复）
 
 - 修复 LazyCat manifest 覆盖镜像 `PATH` 后遗漏 Studio 托管 npm bin 目录的问题。
