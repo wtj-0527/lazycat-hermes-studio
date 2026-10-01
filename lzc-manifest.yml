@@ -1,6 +1,5 @@
 application:
   subdomain: hermesstudio
-  privileged: true
   multi_instance: true
   routes:
     - /=http://nginx:80
@@ -68,6 +67,10 @@ services:
       # upper/ = user changes only (always preserved across updates)
       # /home excluded - already persistent via /lzcapp/documents/<uid> bind
 
+
+      # Validate mount permission before snapshot cleanup or workdir mutation.
+      # A host administrator override can replace the packaged compose override.
+      sh /lzcapp/pkg/content/check-rootfs-overlay.sh || exit 1
 
       ROOTFS=/lzcapp/cache/rootfs
       BASE=$ROOTFS/base
@@ -393,10 +396,18 @@ services:
         mkdir -p "$UPPER/$d"
         rm -rf "$ROOTFS/work/$d"
         mkdir -p "$ROOTFS/work/$d"
-        mount -t overlay overlay \
+        if ! mount -t overlay overlay \
           -o "lowerdir=$BASE/$d,upperdir=$UPPER/$d,workdir=$ROOTFS/work/$d" \
-          "/$d" && n=$((n+1))
+          "/$d"; then
+          echo "[setup] ERROR: persistent rootfs mount failed for /$d; refusing non-persistent startup" >&2
+          exit 1
+        fi
+        n=$((n+1))
       done
+      if [ "$n" -ne 6 ]; then
+        echo "[setup] ERROR: expected 6 persistent rootfs mounts, got $n; refusing startup" >&2
+        exit 1
+      fi
       echo "[setup] rootfs: $n dirs overlay (base lower + user upper)"
 
       # --- Bash history: flush after each command (survives container kill) ---

@@ -49,6 +49,8 @@ def setup(tmp_path):
     docker.write_text(f'#!{sys.executable}\n'+FAKE);docker.chmod(0o755)
     script=yaml.safe_load(MANIFEST.read_text())['services']['hermes-webui']['setup_script']
     script=script.split('      # --- Image fingerprint')[0] if '      # --- Image fingerprint' in script else script.split('# --- Image fingerprint')[0]
+    # This harness tests coordinator functions only; preflight is executed separately.
+    script=script.replace('sh /lzcapp/pkg/content/check-rootfs-overlay.sh || exit 1', ':')
     script=script.replace('sleep 5','sleep 0.05').replace('sleep 10','sleep 0.05')
     script=script.replace('PROGRESS_STATE=/tmp/hermes-rootfs-progress','PROGRESS_STATE="$TEST_PROGRESS"')
     script=script.replace('UPGRADE_LOCAL_LOCK_FILE=/lzcapp/cache/rootfs-upgrade.lock','UPGRADE_LOCAL_LOCK_FILE="$TEST_LOCAL_LOCK"')
