@@ -95,3 +95,10 @@ Docker 上的 `hermes-studio-rootfs-upgrade-lock`。所有实例必须挂载同�
 测试：`uv run --with pytest --with pyyaml python -m pytest tests/test_serialized_snapshot.py tests/test_upgrade_coordinator_runtime.py -q`。
 运行时测试执行 manifest 中的真实 shell，使用进程间加锁的模拟 Docker；
 覆盖三实例互斥与 Docker/拉取/注册故障，不代替真实设备升级验收。
+
+## 持久化权限故障防护
+
+启动前验证 overlay 挂载，任何目录挂载失败都会停止服务，避免持久化工具
+被隐藏但应用继续运行。管理员 override 替换包内 override 时需要显式保留
+SYS_ADMIN、fuse 和共享 Docker socket。详见 `content/ROOTFS-REPAIR.md`；
+随包提供只生成候选配置、不自动修改宿主机的合并工具。

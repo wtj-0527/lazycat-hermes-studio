@@ -1,3 +1,13 @@
+# 2026.10.01.1453（Rootfs 持久化权限防护修复）
+
+- 新增启动前 overlay 挂载探测，在 base/upper/work 变更前发现缺失 SYS_ADMIN 或挂载故障，失败时停止，不再以 0 dirs overlay 假持久化运行。
+- 任一正式 rootfs 挂载失败或少于六个挂载时停止启动，防止 gh 等持久化工具被隐藏。
+- 随包提供管理员 override 合并工具与修复说明；保留 nginx 等原配置，拒绝冲突，不自动修改宿主机。
+- 移除不受支持的 application.privileged 字段，权限仍来自包内 compose override。管理员 override 的平台优先级无法由 LPK 绕过。
+- 运行镜像保持 0.7.26 main 97203089，无需重建镜像；不自动安装或重启现有实例。
+
+---
+
 # 2026.10.01.1018（Ekko Studio 0.7.26 main）
 
 - 严格基于 `EKKOLearnAI/ekko-studio` 最新 `main@972030895c203f36de2328b9266913b857137683`（0.7.26）构建，不携带未合并 PR。
