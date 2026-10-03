@@ -1,3 +1,10 @@
+## 2026.10.03.1119 — Ekko Studio 0.7.29 main
+
+- 同步上游 main 637a6fbbac5325f97b79ec12ec7263a5503039a2，不叠加未合并 PR。
+- 包含主线 Agent 更新路径修复、Antigravity scoped、工作区下载和多模态标题修复。
+- 保留 rootfs 持久化、升级协调和权限防护；不预装第三方 CLI。
+- 构建来源、镜像摘要与 LPK 校验记录随 Release 附件提供。
+
 # 2026.10.01.1453（Rootfs 持久化权限防护修复）
 
 - 新增启动前 overlay 挂载探测，在 base/upper/work 变更前发现缺失 SYS_ADMIN 或挂载故障，失败时停止，不再以 0 dirs overlay 假持久化运行。
