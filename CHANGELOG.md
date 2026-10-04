@@ -1,3 +1,10 @@
+## 2026.10.04.0335 — Ekko Studio latest main
+
+- 同步上游 main ae238d0ae452d16296bcfe33b0d45aa10959d550，Studio 0.7.29；不叠加未合并 PR。
+- 包含主线新增 coding agent、图片输入及 Windows 长提示词等修复。
+- 保留 rootfs 持久化、升级协调与权限防护，不预装第三方 CLI。
+- 精确来源、镜像摘要与制品哈希随 Release 溯源附件提供。
+
 ## 2026.10.03.1119 — Ekko Studio 0.7.29 main
 
 - 同步上游 main 637a6fbbac5325f97b79ec12ec7263a5503039a2，不叠加未合并 PR。
