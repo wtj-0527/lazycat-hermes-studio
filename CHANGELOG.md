@@ -1,3 +1,11 @@
+## 2026.10.04.0942 — PR #3287 Claude Code 启动策略（已验收）
+
+- 包装 main 指向 PR #3287 冻结提交 `77e49b32e163082283d75835d0a1664007e9dbbb` 的已验收镜像；应用 PR 尚未合并，不宣称为纯应用主线版本。
+- Claude Code Global/Scoped 使用 `IS_SANDBOX=1` 和 `--dangerously-skip-permissions`；移除 root auto 分支，当前 PR 未恢复 `--allowedTools` 显式声明。
+- 发布已安装验收的原 LPK，不重新生成：SHA-256 `30c12ef50c8be5b248581a41e166c073c1b7ab71d65a6a56951301b0390bc06d`，632,320 字节。
+- 镜像 manifest digest：`sha256:fd568884d55b24344cd093627dd9a8f67b175d7b9c2c7452e52a16a79c95951a`。
+- 保留现有 rootfs 持久化及包装内容，不执行安装、部署或重启。
+
 ## 2026.10.04.0335 — Ekko Studio latest main
 
 - 同步上游 main ae238d0ae452d16296bcfe33b0d45aa10959d550，Studio 0.7.29；不叠加未合并 PR。
