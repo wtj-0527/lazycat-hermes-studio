@@ -1,3 +1,10 @@
+## 2026.10.05.1152 — Ekko Studio 0.7.30 latest main
+
+- 同步 `EKKOLearnAI/ekko-studio` main `0c4792e6cea89ce592de8dd3bd8ae53bccc882ab`，不叠加未合并 PR。
+- 包含最新主线 P2P 上行网卡绑定、Docker UDP 端口发布及相关主线改进。
+- 两个 Studio 服务统一使用新的唯一 ACR 镜像标签，保留 rootfs 持久化、升级协调、权限防护及已有包装内容。
+- 构建、测试、镜像摘要和制品校验记录随 Release 溯源附件提供；不自动安装或重启在线 LazyCat 实例。
+
 ## 2026.10.04.0942 — PR #3287 Claude Code 启动策略（已验收）
 
 - 包装 main 指向 PR #3287 冻结提交 `77e49b32e163082283d75835d0a1664007e9dbbb` 的已验收镜像；应用 PR 尚未合并，不宣称为纯应用主线版本。
