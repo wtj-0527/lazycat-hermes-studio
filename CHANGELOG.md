@@ -1,3 +1,10 @@
+## 2026.10.06.1145 — Studio latest main
+
+- 同步上游 `EKKOLearnAI/hermes-studio` main `0c28364789771dd0b197b9506e5cdeee52743876`（0.7.30），不叠加未合并 PR。
+- 包含 P2P STUN fake-IP DNS 解析、模型元数据/计费、推理努力和主题相关主线修复。
+- 两个 Studio 服务同步更新至唯一 ACR 镜像，保留 rootfs 持久化、协调器、权限防护及已有包装内容。
+- 测试、镜像摘要、LPK 哈希随 Release 溯源附件提供；不自动安装或重启在线实例。
+
 ## 2026.10.05.1152 — Ekko Studio 0.7.30 latest main
 
 - 同步 `EKKOLearnAI/ekko-studio` main `0c4792e6cea89ce592de8dd3bd8ae53bccc882ab`，不叠加未合并 PR。
