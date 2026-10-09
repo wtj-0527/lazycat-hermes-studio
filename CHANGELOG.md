@@ -1,3 +1,10 @@
+## 2026.10.09.1401 — Studio main + PR #3334 Codex usage / 输出上限修复
+
+- 基于上游 `EKKOLearnAI/ekko-studio` main `286cf8f8a1abb279d992a099ddc00f3abaf3b669`（0.7.32），叠加未合并 PR #3334 提交 `e13c48bdb1f243d65366cb62e1f0e6a0d201ece8`；应用 PR 尚未合并，不宣称为纯主线版本。
+- Codex Responses 代理对 chat_completions / anthropic_messages 供应商回传规范化 usage（含缓存与推理 token），恢复 Codex 自动压缩；Anthropic `max_tokens` 改用模型输出上限，不再写死 4096。
+- 镜像从源码完整构建（基础镜像按 digest 固定），两个 Studio 服务同步更新至唯一 ACR 标签；保留 rootfs 持久化、协调器、权限防护及已有包装内容。
+- 测试、镜像摘要、LPK 哈希随 Release 溯源附件提供；不自动安装或重启在线实例。
+
 ## 2026.10.06.1145 — Studio latest main
 
 - 同步上游 `EKKOLearnAI/hermes-studio` main `0c28364789771dd0b197b9506e5cdeee52743876`（0.7.30），不叠加未合并 PR。
