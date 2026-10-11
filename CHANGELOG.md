@@ -1,3 +1,11 @@
+## 2026.10.11.0528 — PR #3360 Claude 具体模型显示修复
+
+- 更新至上游未合并 PR #3360 冻结提交 `5d32e073649a56e96d414ee99fab95508c694a40`（Studio 0.7.33），包含 Claude 模型发现修复及该 PR 最新工作流兼容修复；不宣称为纯主线版本。
+- Claude 模型名称展示 CLI 返回的具体 `resolvedModel`，例如 `Opus (claude-opus-5-5)`；支持按具体 ID 搜索，执行仍保留原生别名及上下文窗口选择值。
+- 旧版 CLI 未返回具体模型时保留原名称，不猜测模型版本；初始化账号对象不会进入模型目录。
+- 两个服务同步更新至唯一 ACR 镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.33-pr3360-5d32e073-202610110528`，保留现有 rootfs 持久化与包装内容。
+- 真实 Claude CLI、单测、桌面/移动端浏览器、构建与制品校验随 Release 附件溯源；不自动安装或重启在线实例。
+
 ## 2026.10.11.0501 — PR #3360 原生模型与推理强度选择
 
 - 按指定上游 `EKKOLearnAI/ekko-studio` 未合并 Draft PR #3360 冻结提交 `28e13cab5099a0001ed49a7051f2f0c14b7dfd5d`（Studio 0.7.33）构建；不宣称为纯主线版本。
