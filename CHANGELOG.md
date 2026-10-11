@@ -1,3 +1,11 @@
+## 2026.10.11.0501 — PR #3360 原生模型与推理强度选择
+
+- 按指定上游 `EKKOLearnAI/ekko-studio` 未合并 Draft PR #3360 冻结提交 `28e13cab5099a0001ed49a7051f2f0c14b7dfd5d`（Studio 0.7.33）构建；不宣称为纯主线版本。
+- 单聊新建、群聊成员和工作流节点共享原生模型选择，持久化模型和推理强度并传递到执行；支持模型发现缓存及 Cursor/Antigravity 模型族映射。
+- 工作流节点会话面板展示实际执行模型，模型及推理强度配置只读；改进 OpenCode 嵌套错误展示。
+- 两个 Studio 服务同步更新至唯一 ACR 镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.33-pr3360-28e13cab-202610110501`；保留现有包装和 rootfs 持久化内容。
+- 构建、测试、镜像摘要和 LPK 哈希随 Release 溯源附件提供；上游完整套件限制据实记录，不自动安装或重启在线实例。
+
 ## 2026.10.09.1401 — Studio main + PR #3334 Codex usage / 输出上限修复
 
 - 基于上游 `EKKOLearnAI/ekko-studio` main `286cf8f8a1abb279d992a099ddc00f3abaf3b669`（0.7.32），叠加未合并 PR #3334 提交 `e13c48bdb1f243d65366cb62e1f0e6a0d201ece8`；应用 PR 尚未合并，不宣称为纯主线版本。
