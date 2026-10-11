@@ -1,3 +1,11 @@
+## 2026.10.11.0839 — 已有会话输入栏具体模型显示
+
+- 固定上游未合并 PR #3360 提交 `6c3c67ceb14c6b43807cdec1b1858cd3d3cd008c`（Studio 0.7.33），不宣称为纯主线版本。
+- 已有 Global 会话输入栏、悬浮提示和工作流节点会话栏统一使用原生模型名称解析；Claude 的 opus/default 别名显示发现目录返回的具体 ID，保留原生选择值用于继续执行。
+- 兼容历史 Claude Agent 身份，元数据缺失时保留原 ID；输入栏及节点详情继续只读，新增 native cache resolvedModel 类型校验。
+- 89 项相关单测、31 项浏览器回归覆盖新建/恢复、桌面/移动端、提示、工作流和继续发送；测试及制品校验随 Release 溯源附件提供。
+- 两个服务同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.33-pr3360-6c3c67ce-202610110839`；保留 rootfs 持久化与包装，不自动安装或重启实例。
+
 ## 2026.10.11.0726 — Claude 具体 ID 与模型数量修正
 
 - 固定上游未合并 PR #3360 提交 `5182fca85f3bead274d112d5d2bd2edc9cc7f730`（Studio 0.7.33），含先前 CI 断言修复；不宣称为纯主线版本。
