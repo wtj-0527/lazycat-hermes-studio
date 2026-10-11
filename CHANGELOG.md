@@ -1,3 +1,11 @@
+## 2026.10.11.0726 — Claude 具体 ID 与模型数量修正
+
+- 固定上游未合并 PR #3360 提交 `5182fca85f3bead274d112d5d2bd2edc9cc7f730`（Studio 0.7.33），含先前 CI 断言修复；不宣称为纯主线版本。
+- Claude 模型名称直接显示 CLI 的具体 ID，移除额外的 Opus/Sonnet 标签与圆括号；native `resolvedModel` 单独作为公开元数据返回，执行仍保留原生选择值。
+- 默认别名与显式模型解析到同一 ID 时只显示一项；保留 Agent 默认选择及旧选择的恢复和执行，计数不再包含空默认项。当前 CLI 四个具体模型显示为 4。
+- Claude Code 原生目录与 Claude OAuth API/缓存目录来源独立，不把旧 fallback 预设当作 CLI 可用模型。
+- 两个服务同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.33-pr3360-5182fca8-202610110726`；保留 rootfs 持久化及包装内容，不自动安装或重启实例。测试与制品校验见 Release 溯源附件。
+
 ## 2026.10.11.0528 — PR #3360 Claude 具体模型显示修复
 
 - 更新至上游未合并 PR #3360 冻结提交 `5d32e073649a56e96d414ee99fab95508c694a40`（Studio 0.7.33），包含 Claude 模型发现修复及该 PR 最新工作流兼容修复；不宣称为纯主线版本。
