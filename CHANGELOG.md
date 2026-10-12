@@ -1,3 +1,10 @@
+## 2026.10.12.1549 — Studio 0.7.34 最新 main
+
+- 固定上游 `EKKOLearnAI/ekko-studio` main 提交 `e34bdd9527854086e5d16d395d53f554ae7e3192`（Studio 0.7.34），从纯主线源码构建。
+- 包含已合并的原生模型发现及具体模型显示、会话与运行时修复、usage/成本统计和 Codex Responses 代理 usage/输出上限修复。
+- 两个 Studio 服务同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.34-main-e34bdd95-202610121549`；保留最新包装 main 的 rootfs 持久化、升级协调器、MCP 和权限配置。
+- 源码提交、固定基础镜像摘要、验证结果及 LPK 哈希随 Release 溯源附件提供；不自动安装或重启实例。
+
 ## 2026.10.11.0839 — 已有会话输入栏具体模型显示
 
 - 固定上游未合并 PR #3360 提交 `6c3c67ceb14c6b43807cdec1b1858cd3d3cd008c`（Studio 0.7.33），不宣称为纯主线版本。
