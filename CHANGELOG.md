@@ -1,3 +1,10 @@
+## 2026.10.18.1418 — Studio 0.7.36 上游 main
+
+- 同步 EKKOLearnAI/ekko-studio main `dfca4ba7f9cd9c5ad66187eb326301043e097898`，未合入额外 PR。
+- 包含账户级模型 Responses API 与密钥设置，以及 main 已合入的修复。
+- 更新 Hermes Studio 和 ticket-lease 服务镜像为 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.36-main-dfca4ba7-202610181418`。
+- 保留现有 rootfs 持久化、MCP 集成、上传限制与权限配置。
+
 ## 2026.10.12.1549 — Studio 0.7.34 最新 main
 
 - 固定上游 `EKKOLearnAI/ekko-studio` main 提交 `e34bdd9527854086e5d16d395d53f554ae7e3192`（Studio 0.7.34），从纯主线源码构建。
