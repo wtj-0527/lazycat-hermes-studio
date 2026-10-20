@@ -1,3 +1,11 @@
+## 2026.10.21.0705 — Studio 0.7.38 最新 main
+
+- 固定上游 EKKOLearnAI/ekko-studio main `0760128df02dbcc2c7bd3776edcfbd8035dc58d7`，从纯主线源码构建，不叠加未合并 PR。
+- 包含依赖安全升级、隐私政策入口与抽屉布局、主题、页头避让等最新主线修复。
+- 两个 Studio 服务同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.38-main-0760128d-202610210705`（linux/amd64），基础镜像按摘要固定。
+- 保留 rootfs 持久化、MCP 集成、CORS、自定义域名、上传限制及权限配置；不自动安装或重启实例。
+- 测试、镜像摘要和 LPK 哈希见 Release 溯源附件。
+
 ## 2026.10.20.0313 — Studio 0.7.37 最新 main 与自定义域名 WebSocket
 
 - 固定上游 EKKOLearnAI/ekko-studio main `a8bc389731d105ea45a14012159255ce1e5f33a1`，从纯主线源码构建，不叠加未合并 PR。
