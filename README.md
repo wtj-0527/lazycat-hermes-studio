@@ -102,3 +102,7 @@ Docker 上的 `hermes-studio-rootfs-upgrade-lock`。所有实例必须挂载同�
 被隐藏但应用继续运行。管理员 override 替换包内 override 时需要显式保留
 SYS_ADMIN、fuse 和共享 Docker socket。详见 `content/ROOTFS-REPAIR.md`；
 随包提供只生成候选配置、不自动修改宿主机的合并工具。
+
+## 自定义域名与跨域来源
+
+安装包为 `hermes-webui` 设置 `CORS_ORIGINS=*`，允许任意 HTTP / WebSocket 来源，避免反向代理改写 Host 后 Socket.IO 握手被拒绝。此设置不取消登录与权限校验，但移除了来源白名单保护；不信任任意网页来源时，请将该变量改为所需的精确来源列表。
