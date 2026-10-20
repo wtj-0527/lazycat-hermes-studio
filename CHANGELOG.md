@@ -1,3 +1,10 @@
+## 2026.10.20.0313 — Studio 0.7.37 最新 main 与自定义域名 WebSocket
+
+- 固定上游 EKKOLearnAI/ekko-studio main `a8bc389731d105ea45a14012159255ce1e5f33a1`，从纯主线源码构建，不叠加未合并 PR。
+- 合入包装 PR #138：`CORS_ORIGINS=*` 允许任意 HTTP / WebSocket 来源，保留登录与权限校验。
+- 同步 hermes-webui 与 ticket-lease 镜像为 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.37-main-a8bc3897-202610200313`（linux/amd64）。
+- 保留 rootfs 持久化、MCP 集成、上传限制及权限配置；不自动安装或重启实例。
+
 ## 2026.10.18.1418 — Studio 0.7.36 上游 main
 
 - 同步 EKKOLearnAI/ekko-studio main `dfca4ba7f9cd9c5ad66187eb326301043e097898`，未合入额外 PR。
