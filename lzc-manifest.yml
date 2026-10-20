@@ -40,6 +40,8 @@ services:
       start_period: 6000s
     environment:
       - PORT=8648
+      # Allow custom domains through reverse proxies; authentication remains required.
+      - CORS_ORIGINS=*
       - ORIGINAL_URL_PROXY_PORT=80
       - NODE_OPTIONS=--import=/lzcapp/pkg/content/lazycat-original-url-proxy.mjs
       - SOCKET_PATH=/lzcapp/var/mcp-runtime/lease.sock
