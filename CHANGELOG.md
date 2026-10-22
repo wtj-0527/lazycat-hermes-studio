@@ -1,3 +1,9 @@
+## 2026.10.22.0940
+
+- Publish upstream main a1afbf95e63f648cb7d57c2aa0ed72d465aed5e7 (Studio 0.7.38), with Node.js 24.22.1.
+- Remove CORS_ORIGINS wildcard and restore upstream same-host defaults.
+- Pure upstream main: does not include unmerged JEV/screenshot PRs or local PR3478 follow-up fixes.
+
 ## 2026.10.21.0705 — Studio 0.7.38 最新 main
 
 - 固定上游 EKKOLearnAI/ekko-studio main `0760128df02dbcc2c7bd3776edcfbd8035dc58d7`，从纯主线源码构建，不叠加未合并 PR。
