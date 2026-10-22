@@ -105,4 +105,4 @@ SYS_ADMIN、fuse 和共享 Docker socket。详见 `content/ROOTFS-REPAIR.md`；
 
 ## 自定义域名与跨域来源
 
-安装包为 `hermes-webui` 设置 `CORS_ORIGINS=*`，允许任意 HTTP / WebSocket 来源，避免反向代理改写 Host 后 Socket.IO 握手被拒绝。此设置不取消登录与权限校验，但移除了来源白名单保护；不信任任意网页来源时，请将该变量改为所需的精确来源列表。
+安装包不再设置 `CORS_ORIGINS`，沿用上游默认的同主机来源校验。反向代理应保留正确的外部 Host；如确需跨域访问，请由管理员配置精确的来源白名单，不默认放行任意来源。此变更不取消登录与权限校验。
