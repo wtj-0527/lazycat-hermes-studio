@@ -1,3 +1,11 @@
+## 2026.10.24.1357 — Studio 0.7.39 最新 main
+
+- 固定上游 EKKOLearnAI/ekko-studio main `7660c3ba995d62f9998f6a17f575676c6bef738a`，从完整纯主线源码构建，不叠加未合并 PR。
+- 包含设备窗口复用和存储隔离、远程模式桌面浏览器自动共享、macOS Cmd 快捷键与 contenteditable 输入修复，以及浏览器主题同步和缓存初始化修复。
+- hermes-webui 与 lazycat-ticket-lease 同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.39-main-7660c3ba-202610241357`，linux/amd64；基础镜像按摘要固定。
+- 保留包装 main 的 rootfs 持久化、MCP、权限、路由和同源 CORS 设置；不自动安装或重启 LazyCat 实例。
+- 源码、镜像摘要、LPK 哈希和验证结果随 Release 溯源附件提供。
+
 ## 2026.10.22.0940
 
 - Publish upstream main a1afbf95e63f648cb7d57c2aa0ed72d465aed5e7 (Studio 0.7.38), with Node.js 24.22.1.
