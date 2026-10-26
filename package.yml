@@ -1,5 +1,5 @@
 package: community.lazycat.app.hermes-studio
-version: 2026.10.24.1357
+version: 2026.10.26.0834
 name: Hermes Studio
 description: Hermes AI Agent Web UI with full rootfs persistence
 author: 王.W

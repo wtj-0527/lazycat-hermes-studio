@@ -1,3 +1,10 @@
+## 2026.10.26.0834 — Studio 0.7.39 最新 main
+
+- 固定上游 EKKOLearnAI/ekko-studio main `73083384c128b55260eadcbb8f9ef35a47a292c3`，使用 git archive 纯提交构建，不叠加未合并 PR。
+- hermes-webui 与 lazycat-ticket-lease 同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.39-main-73083384-202610260834`（linux/amd64），基础镜像按摘要固定，Node.js 24.22.1。
+- 保留现有 rootfs 持久化、MCP、权限、路由和同源 CORS 配置；不自动安装或重启已部署实例。
+- 完整镜像构建、Sharp、隔离运行及包装测试记录与镜像/LPK 哈希随 Release 提供。
+
 ## 2026.10.24.1357 — Studio 0.7.39 最新 main
 
 - 固定上游 EKKOLearnAI/ekko-studio main `7660c3ba995d62f9998f6a17f575676c6bef738a`，从完整纯主线源码构建，不叠加未合并 PR。
