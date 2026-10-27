@@ -1,3 +1,11 @@
+## 2026.10.27.1404 — Studio 0.7.39 最新 main
+
+- 固定上游 EKKOLearnAI/ekko-studio main `af2d7ac6a739e17c16e1d8ad798fa806dd0115e4`，纯主线构建，不叠加未合并 PR。
+- 包含 Person 助手共享工作区与后台任务、Edge TTS WebSocket 握手修复、Claude 指令跨提示刷新保留修复。
+- 两个 Studio 服务同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.39-main-af2d7ac6-202610271404`，linux/amd64，Node.js 24.22.1，基础镜像按摘要固定。
+- 保留既有 rootfs 持久化、MCP、权限、路由及同源 CORS 配置；不自动安装或重启运行中的实例。
+- 构建、隔离健康检查、源码一致性与包装测试证据随 Release 提供。
+
 ## 2026.10.26.0834 — Studio 0.7.39 最新 main
 
 - 固定上游 EKKOLearnAI/ekko-studio main `73083384c128b55260eadcbb8f9ef35a47a292c3`，使用 git archive 纯提交构建，不叠加未合并 PR。
