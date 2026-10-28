@@ -1,3 +1,10 @@
+## 2026.10.28.0033 — Studio 0.7.39 最新 main
+
+- 固定上游 main `8e2d46249948bc9473da5f203be142d8d4f21166`，不叠加未合并 PR。
+- 包含 Person 设置重设计、上下文与任务执行加固，以及悬浮后台任务活动（#3554、#3560）。
+- 两个 Studio 服务同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.39-main-8e2d4624-202610280033`。
+- 使用 npmmirror 与匹配的本地 Node 头文件构建；保留原始源码及锁文件，不自动安装或重启实例。
+
 ## 2026.10.27.1404 — Studio 0.7.39 最新 main
 
 - 固定上游 EKKOLearnAI/ekko-studio main `af2d7ac6a739e17c16e1d8ad798fa806dd0115e4`，纯主线构建，不叠加未合并 PR。
