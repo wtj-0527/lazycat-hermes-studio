@@ -1,3 +1,10 @@
+## 2026.10.29.0402 — Studio 0.7.39 最新 main
+
+- 固定上游 main `8903409d8eb5f08fb4bfd90096804daa1fcd8e59`，不叠加未合并 PR。
+- 包含 Person 共享上下文、阶段与会话模型设置、任务继续和结果记忆、普通聊天隔离修复，以及首次消息建 BOT 与清空会话后新聊天入口。
+- 两个 Studio 服务同步镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.7.39-main-8903409d-202610290402`。
+- 沿用 npmmirror 和匹配的本地 Node 头文件构建，不自动安装或重启实例。
+
 ## 2026.10.28.0033 — Studio 0.7.39 最新 main
 
 - 固定上游 main `8e2d46249948bc9473da5f203be142d8d4f21166`，不叠加未合并 PR。
