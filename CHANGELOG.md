@@ -1,3 +1,9 @@
+## 2026.10.31.0041 — Studio 0.8.0 最新 main
+
+- 固定上游 `5eb3d9636d449157bf85747b99027239054abf2a`，纯主线，不叠加未合并补丁。
+- 包含浏览器自动化焦点隔离修复（#3594）、0.8.0版本更新和Person协作改进。
+- 使用镜像 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.0-main-5eb3d963-202610310041`，不自动安装或重启实例。
+
 ## 2026.10.29.0402 — Studio 0.7.39 最新 main
 
 - 固定上游 main `8903409d8eb5f08fb4bfd90096804daa1fcd8e59`，不叠加未合并 PR。
