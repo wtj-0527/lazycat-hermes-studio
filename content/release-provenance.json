@@ -1,0 +1,11 @@
+{
+  "source": "e9acaf5ad6c48c0958ec418a182f6962369b4799",
+  "source_tree": "0655f1aa9cc6ae6105590b9140723192ddf512e3",
+  "app_version": "0.8.12",
+  "version": "2026.11.02.0355",
+  "image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.12-main-e9acaf5a-202611020355",
+  "image_digest": "sha256:201813dcfbf0ab0baac62d56d6b7773329adc333268bf2acc99cd66ef258114b",
+  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:201813dcfbf0ab0baac62d56d6b7773329adc333268bf2acc99cd66ef258114b",
+  "base_image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:fc0abfa715d1dced186c4958df06ba99ea0bb26baeb97ab2367f804684ed58be",
+  "source_branch": "main"
+}
