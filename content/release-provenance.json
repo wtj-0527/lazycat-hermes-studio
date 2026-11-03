@@ -1,11 +1,11 @@
 {
-  "source": "e9acaf5ad6c48c0958ec418a182f6962369b4799",
-  "source_tree": "0655f1aa9cc6ae6105590b9140723192ddf512e3",
-  "app_version": "0.8.12",
-  "version": "2026.11.02.0355",
-  "image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.12-main-e9acaf5a-202611020355",
-  "image_digest": "sha256:201813dcfbf0ab0baac62d56d6b7773329adc333268bf2acc99cd66ef258114b",
-  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:201813dcfbf0ab0baac62d56d6b7773329adc333268bf2acc99cd66ef258114b",
-  "base_image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:fc0abfa715d1dced186c4958df06ba99ea0bb26baeb97ab2367f804684ed58be",
+  "source": "d43cb6a1008575cf767d974c80dcd19c3fc49e66",
+  "source_tree": "7b4ff7d4d1312147e60b407c1be663496b3eafc4",
+  "app_version": "0.8.14",
+  "version": "2026.11.03.1712",
+  "image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.14-main-d43cb6a1-202611031712",
+  "image_digest": "sha256:a6e45b8a8477799ab0d1912590800cc2219a2bf3890a2d03f2060dfed0ee91d7",
+  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:a6e45b8a8477799ab0d1912590800cc2219a2bf3890a2d03f2060dfed0ee91d7",
+  "base_image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:201813dcfbf0ab0baac62d56d6b7773329adc333268bf2acc99cd66ef258114b",
   "source_branch": "main"
 }

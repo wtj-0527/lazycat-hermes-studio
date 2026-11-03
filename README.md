@@ -47,23 +47,15 @@ uv tool install <package>          # → ~/.local/bin/，重启不丢
 
 见 [CHANGELOG.md](CHANGELOG.md)
 
-## 自动化维护
+## 发布维护
 
-本仓库包含两个 GitHub Actions workflow：
+当前主线不包含自动升级或 LPK 发布 workflow。发布时固定上游 `main` 的完整提交，
+按锁文件重新构建 Studio，并将镜像推送至 ACR；两个 Studio 服务必须引用同一镜像摘要。
+同时更新 `package.yml`、`content/release-provenance.json` 和版本日志，通过 PR 合并。
 
-- `.github/workflows/check-hermes-studio-upgrade.yml`：每天北京时间 10:00 检查 Hermes Web UI 官方新版本，发现新版本后同步镜像到 ACR，并创建或更新升级 PR；不会自动合并。
-- `.github/workflows/release-lpk.yml`：PR 合并到 `main` 后自动打包 LPK、创建/更新 GitHub Release、上传 LPK 资产。
-
-自动检查 workflow 需要配置以下 GitHub Secrets：
-
-- `ACR_REGISTRY`：例如 `registry.cn-shanghai.aliyuncs.com`
-- `ACR_NAMESPACE`：例如 `wtjking`
-- `ACR_USERNAME`：ACR 用户名
-- `ACR_PASSWORD`：ACR 密码或访问令牌
-
-本仓库自动升级 / 自动发布链路的真实修复记录见：
-
-- [docs/automation-recovery-notes.md](docs/automation-recovery-notes.md)
+从合并后的包装仓提交运行 `lzc-cli project build -o <输出路径>`，校验包内 manifest、
+版本、compose override 和 content 内容，再创建对应版本的 GitHub Release，上传 LPK、
+SHA-256 校验文件及构建验证证据。发布不包含安装 LPK、升级设备或重启实例。
 
 ## License
 
