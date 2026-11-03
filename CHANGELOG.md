@@ -1,3 +1,12 @@
+## 2026.11.03.1712 — Studio 0.8.14 最新 main
+
+- 固定上游 EKKOLearnAI/ekko-studio main `d43cb6a1008575cf767d974c80dcd19c3fc49e66`，从提交归档构建，不叠加未合并补丁。
+- 包含跨 BOT 定时任务总览、原任务会话内纠正、自动验收与修复流程、默认工作区及流式工具身份修复。
+- 两个 Studio 服务同步固定 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:a6e45b8a8477799ab0d1912590800cc2219a2bf3890a2d03f2060dfed0ee91d7`（linux/amd64），依赖按当前锁文件重新安装。
+- 保留 rootfs 持久化、MCP、权限、路由及同源 CORS 配置；更正 README 中已失效的自动发布说明。
+- 上游生产构建、规范检查、144 项单元测试、13 项浏览器测试通过；镜像逐文件校验及隔离健康检查通过。
+- LPK 从包装仓合并后的 main 重建并作为 Release 资产发布；不安装、部署或重启用户设备。
+
 ## 2026.11.02.0355 — Studio 0.8.12 最新 main
 
 - 固定上游 main `e9acaf5ad6c48c0958ec418a182f6962369b4799`，与 Mac 更新同源码，无额外未合并补丁。
