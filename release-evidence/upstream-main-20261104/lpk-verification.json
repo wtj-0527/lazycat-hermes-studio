@@ -1,0 +1,16 @@
+{
+  "file": "/home/agent/work/reports/upstream-main-release-20261104/community.lazycat.app.hermes-studio-v2026.11.04.1125.lpk",
+  "bytes": 633344,
+  "sha256": "565abb45fd24c26c8e4eba2ca215fa47e36167467687775b865a42eeb0a446b4",
+  "source": "6e9eee5020fa91edf9bb4995d5732ff160337c6e",
+  "version": "2026.11.04.1125",
+  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:cda769c14193c8ddc44170501a5d11078a1640bbb865081e9ea7cd06457b93b2",
+  "verified_content_files": 11,
+  "preserved_wrapper_files": 10,
+  "outer_files_match": true,
+  "compose_matches": true,
+  "both_images_match": true,
+  "architecture": "linux/amd64",
+  "installed_on_lazycat": false,
+  "deployed": false
+}

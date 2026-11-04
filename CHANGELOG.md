@@ -1,3 +1,10 @@
+## 2026.11.04.1125 — Studio 0.8.15 upstream main
+
+- 固定 upstream `EKKOLearnAI/ekko-studio` main `6e9eee5020fa91edf9bb4995d5732ff160337c6e`；该提交包含 PR #3676 `e798379d8`，并包含其后已进入 main 的 upstream 修复。
+- 两个 Studio 服务同步固定镜像摘要 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:cda769c14193c8ddc44170501a5d11078a1640bbb865081e9ea7cd06457b93b2`（linux/amd64）。
+- 生产构建、harness、关键 E2E、串行 unit 回归、镜像隔离校验和 LPK 完整性校验通过。
+- LPK SHA-256：`565abb45fd24c26c8e4eba2ca215fa47e36167467687775b865a42eeb0a446b4`；本次只发布源码对应 LPK 和证据，不部署 NAS。
+
 ## 2026.11.03.1712 — Studio 0.8.14 最新 main
 
 - 固定上游 EKKOLearnAI/ekko-studio main `d43cb6a1008575cf767d974c80dcd19c3fc49e66`，从提交归档构建，不叠加未合并补丁。

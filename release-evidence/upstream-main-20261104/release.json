@@ -1,0 +1,22 @@
+{
+  "upstream": "https://github.com/EKKOLearnAI/ekko-studio.git",
+  "upstream_commit": "6e9eee5020fa91edf9bb4995d5732ff160337c6e",
+  "upstream_version": "0.8.15",
+  "pr3676_ancestor": "e798379d83e0fa42ac1040dadc7214180e3164c9",
+  "image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.15-upstream-main-20261104-202611041125",
+  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:cda769c14193c8ddc44170501a5d11078a1640bbb865081e9ea7cd06457b93b2",
+  "lpk_version": "2026.11.04.1125",
+  "lpk_file": "lpk/community.lazycat.app.hermes-studio-v2026.11.04.1125.lpk",
+  "lpk_bytes": 633344,
+  "lpk_sha256": "565abb45fd24c26c8e4eba2ca215fa47e36167467687775b865a42eeb0a446b4",
+  "architecture": "linux/amd64",
+  "checks": {
+    "build": true,
+    "harness": true,
+    "targeted_e2e": true,
+    "targeted_unit_sequential": true,
+    "lpk": true,
+    "image_smoke": true
+  },
+  "nas_deployed": false
+}
