@@ -1,3 +1,10 @@
+## 2026.11.05.2303 — Studio 0.8.17 upstream main
+
+- 固定 upstream `EKKOLearnAI/ekko-studio` main `35a7158a1ba01eb94e9703f5e9bc98954740e734`。
+- 两个 Studio 服务同步固定镜像摘要 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3`（linux/amd64）。
+- 构建配方显式使用 `https://registry.npmmirror.com/` 和 `https://npmmirror.com/mirrors/node`，不依赖宿主机 npm 配置。
+- LPK 由现有包装仓流程构建；本次不安装、部署或重启用户设备。
+
 ## 2026.11.05.1332 — Studio 0.8.16 upstream main
 
 - 固定 upstream `EKKOLearnAI/ekko-studio` main `59530f6ec03232d1d67ffa6c9c56ad3a01984d5f`。
@@ -1390,7 +1397,6 @@
 - 全 rootfs 持久化（base+upper overlay 分离）
 - 镜像切换到阿里云 ACR
 - AGPL-3.0 许可证
-
 ---
 
 ## v2026.06.19

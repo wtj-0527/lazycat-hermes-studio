@@ -57,6 +57,11 @@ uv tool install <package>          # → ~/.local/bin/，重启不丢
 版本、compose override 和 content 内容，再创建对应版本的 GitHub Release，上传 LPK、
 SHA-256 校验文件及构建验证证据。发布不包含安装 LPK、升级设备或重启实例。
 
+上游 Studio 镜像构建统一使用 `tools/Dockerfile.upstream-build`。该配方显式将
+Node.js 下载源和 npm registry 设置为 `npmmirror.com`，不能依赖宿主机的 npm
+配置自动传入 Docker；如需切换镜像，使用 `NPM_REGISTRY` 和 `NODE_MIRROR`
+build args，并在构建证据中记录最终值。
+
 ## License
 
 [AGPL-3.0](LICENSE)

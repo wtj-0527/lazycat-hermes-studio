@@ -1,0 +1,42 @@
+ARG BASE_IMAGE=nousresearch/hermes-agent:latest
+FROM ${BASE_IMAGE}
+
+ARG NODE_VERSION=24.22.1
+ARG NPM_REGISTRY=https://registry.npmmirror.com/
+ARG NODE_MIRROR=https://npmmirror.com/mirrors/node
+
+USER root
+WORKDIR /app
+
+# The Hermes base image already provides curl, ffmpeg, make and g++.
+RUN ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; else NODE_ARCH="$ARCH"; fi \
+    && curl -fsSL "${NODE_MIRROR}/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz" \
+       -o /tmp/node.tar.gz \
+    && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+       /usr/local/bin/node /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+    && tar -xzf /tmp/node.tar.gz -C /usr/local --strip-components=1 \
+    && rm -f /tmp/node.tar.gz
+
+COPY package*.json ./
+ENV NODE_OPTIONS=--max-old-space-size=4096
+ENV NODE_ENV=development
+ENV NPM_CONFIG_REGISTRY=${NPM_REGISTRY}
+RUN npm config set registry "${NPM_REGISTRY}" \
+    && npm ci --include=dev --ignore-scripts \
+    && npm rebuild node-pty
+
+COPY . .
+RUN npm run build \
+    && npm prune --omit=dev \
+    && npm run verify:sharp-runtime
+
+ENV NODE_ENV=production
+ENV HOME=/home/agent
+ENV HERMES_HOME=/home/agent/.hermes
+ENV HERMES_WEB_UI_MANAGED_GATEWAY=1
+ENV NPM_CONFIG_PREFIX=/home/agent/.hermes-web-ui/coding-agent/npm
+ENV PATH=/home/agent/.hermes-web-ui/coding-agent/npm/bin:/opt/hermes/.venv/bin:$PATH
+
+ENTRYPOINT ["/app/bin/start-studio-all.sh"]
+CMD []
