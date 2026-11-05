@@ -1,10 +1,10 @@
 {
-  "source": "97adf924a602b1c9c9c23b691dd81efc8be4eb4b",
-  "source_tree": "a3ba5276a33a4ba354152cc112803005c76efe19",
-  "version": "0.8.15",
+  "source": "59530f6ec03232d1d67ffa6c9c56ad3a01984d5f",
+  "source_tree": "59530f6ec03232d1d67ffa6c9c56ad3a01984d5f",
+  "version": "0.8.16",
   "mode": "upstream-main",
-  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:698a5da89d60e4525873207bf6863d6298dc7f19fcc0aa90abe5aa46ecaaa33a",
-  "image_tag": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.15-upstream-main-20261105-202611050302",
-  "packaging_base": "9726dcefe91c940c48feecb1fbbe58995e63c523",
-  "created_at": "2026-11-05T03:02:00Z"
+  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:4de9303158273e4280908cc021d703128aae80831e35c07ccca78e099ed975dc",
+  "image_tag": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.16-main-59530f6e-20261105",
+  "packaging_base": "91f5d907300ebd5dd1a60e60d2cc6312a86378e6",
+  "created_at": "2026-11-05T05:32:53Z"
 }

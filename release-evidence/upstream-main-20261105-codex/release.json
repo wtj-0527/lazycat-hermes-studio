@@ -1,0 +1,10 @@
+{
+  "source_commit": "59530f6ec03232d1d67ffa6c9c56ad3a01984d5f",
+  "source_version": "0.8.16",
+  "package_version": "2026.11.05.1332",
+  "image": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:4de9303158273e4280908cc021d703128aae80831e35c07ccca78e099ed975dc",
+  "lpk": "lpk/community.lazycat.app.hermes-studio-v2026.11.05.1332.lpk",
+  "lpk_sha256": "cfdec79604bf6e515494aaff6e4eaa3934a748c8dd9e734a59a7310838d28d93",
+  "lpk_bytes": 633856,
+  "platform": "linux/amd64"
+}

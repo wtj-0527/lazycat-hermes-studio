@@ -1,3 +1,9 @@
+## 2026.11.05.1332 — Studio 0.8.16 upstream main
+
+- 固定 upstream `EKKOLearnAI/ekko-studio` main `59530f6ec03232d1d67ffa6c9c56ad3a01984d5f`。
+- 两个 Studio 服务同步固定镜像摘要 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:4de9303158273e4280908cc021d703128aae80831e35c07ccca78e099ed975dc`（linux/amd64）。
+- LPK 路径为 `lpk/community.lazycat.app.hermes-studio-v2026.11.05.1332.lpk`，大小 `633856` bytes，SHA-256 为 `cfdec79604bf6e515494aaff6e4eaa3934a748c8dd9e734a59a7310838d28d93`；不安装、部署或重启用户设备。
+
 ## 2026.11.05.0302 — Studio 0.8.15 upstream main
 
 - 固定 upstream `EKKOLearnAI/ekko-studio` main `97adf924a602b1c9c9c23b691dd81efc8be4eb4b`；上游 Build、Test、E2E 工作流均成功。
