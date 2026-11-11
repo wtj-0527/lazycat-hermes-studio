@@ -1,0 +1,14 @@
+{
+  "repository": "wtj-0527/lazycat-hermes-studio",
+  "source_commit": "6ff1db8ac6a3f0030c84dc1dc641098712ad92af",
+  "package": "community.lazycat.app.hermes-studio",
+  "version": "2026.11.11.1019",
+  "lpk": "lpk/community.lazycat.app.hermes-studio-v2026.11.11.1019.lpk",
+  "sha256": "567ca588f79be47409e60fed43a40fb9b151e080985ec4fff685ac6a95d8b62d",
+  "size_bytes": 633856,
+  "embedded_package_matches_source": true,
+  "lpk_info": "passed",
+  "lpk_lint": "passed_with_existing_app_store_warnings",
+  "signed": false,
+  "release_commit": "ffe8983fe6bcac8b2e40fda4e235b54741df3057"
+}

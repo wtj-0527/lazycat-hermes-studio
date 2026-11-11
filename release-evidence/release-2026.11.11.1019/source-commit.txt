@@ -1,0 +1,6 @@
+Repository: https://github.com/wtj-0527/lazycat-hermes-studio
+Build source commit: 6ff1db8ac6a3f0030c84dc1dc641098712ad92af
+Release metadata commit: ffe8983fe6bcac8b2e40fda4e235b54741df3057
+Package version: 2026.11.11.1019
+Build command: lzc-cli project release <worktree> -o <artifact>
+Build timezone: Asia/Shanghai
