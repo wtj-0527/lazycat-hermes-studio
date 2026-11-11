@@ -1,7 +1,0 @@
-Build config: /home/agent/work/worktrees/lazycat-hermes-studio/codex/upstream-main-20261105-latest/lzc-build.yml
-[lint] App Store submission requires a valid semver version. Current version is `2026.11.05.2303`.
-[lint] App Store submission requires `services.nginx.image` to start with registry.lazycat.cloud. Current value is `registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine`.
-[lint] App Store submission requires `services.lazycat-ticket-lease.image` to start with registry.lazycat.cloud. Current value is `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3`.
-[lint] App Store submission requires `services.hermes-webui.image` to start with registry.lazycat.cloud. Current value is `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3`.
-[lint] App Store submission requires icon.png smaller than 200 KiB. Current icon source is 565384 bytes: /home/agent/work/worktrees/lazycat-hermes-studio/codex/upstream-main-20261105-latest/lzc-icon.png
-Found 5 manifest lint warning(s).

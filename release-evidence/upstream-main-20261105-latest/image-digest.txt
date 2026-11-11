@@ -1,1 +1,0 @@
-registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3
