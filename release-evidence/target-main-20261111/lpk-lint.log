@@ -1,0 +1,5 @@
+[lpk lint] App Store submission requires a valid semver version. Current version is `2026.11.05.2303`.
+[lpk lint] App Store submission requires `services.nginx.image` to start with registry.lazycat.cloud. Current value is `registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine`.
+[lpk lint] App Store submission requires `services.lazycat-ticket-lease.image` to start with registry.lazycat.cloud. Current value is `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3`.
+[lpk lint] App Store submission requires `services.hermes-webui.image` to start with registry.lazycat.cloud. Current value is `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3`.
+Found 4 LPK lint warning(s).
