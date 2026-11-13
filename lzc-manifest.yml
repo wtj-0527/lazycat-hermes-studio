@@ -19,7 +19,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   lazycat-ticket-lease:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544
     entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
     # LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime into this
     # application service. Never construct or override the gateway address.
@@ -31,7 +31,7 @@ services:
       - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:b5e0f91c871cf14705479d31495c9125c362e62b8a816e8735ec4fea6359f7d3
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/livez"]
       interval: 15s

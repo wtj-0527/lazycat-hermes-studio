@@ -1,3 +1,10 @@
+## 2026.11.13.0254 — Studio 0.8.21 upstream main
+
+- 固定 upstream `EKKOLearnAI/ekko-studio` main `59447845d5abcf63b3b2d78ccf50e1d4627f4866`。
+- 两个 Studio 服务同步固定镜像摘要 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544`（linux/amd64）。
+- 使用淘宝镜像源 `https://registry.npmmirror.com/` 和 `https://npmmirror.com/mirrors/node` 构建。
+- LPK SHA-256：`3390ffd1270ed3c66fc33a6fb26a7317ad826e6eadec5d22e9426351e7891752`；包装测试 70 passed、10 subtests passed。
+
 ## 2026.11.05.2303 — Studio 0.8.17 upstream main
 
 - 固定 upstream `EKKOLearnAI/ekko-studio` main `35a7158a1ba01eb94e9703f5e9bc98954740e734`。
