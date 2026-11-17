@@ -147,8 +147,28 @@ export function checkHealth(socketPath = DEFAULT_LISTEN, timeout = 2000) {
   });
 }
 
+// LazyCat includes every service's Docker health in the application's status.
+// Probe the local listener here; upstream availability is a separate diagnostic.
+export function checkListener(socketPath = DEFAULT_LISTEN, timeout = 2000) {
+  return new Promise((done, reject) => {
+    const socket = net.createConnection(socketPath);
+    const timer = setTimeout(() => socket.destroy(new Error('relay listener timed out')), timeout);
+    socket.once('connect', () => {
+      socket.destroy();
+      done();
+    });
+    socket.once('error', reject);
+    socket.once('close', () => clearTimeout(timer));
+  });
+}
+
 async function main() {
   const listenPath = process.env.DOCKER_RELAY_LISTEN || DEFAULT_LISTEN;
+  if (process.argv.includes('--check-listener')) {
+    await checkListener(listenPath);
+    console.log('Docker socket relay listener: OK');
+    return;
+  }
   if (process.argv.includes('--check')) {
     await checkHealth(listenPath);
     console.log('Docker socket relay: OK');

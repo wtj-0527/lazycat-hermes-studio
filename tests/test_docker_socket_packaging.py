@@ -25,7 +25,8 @@ def test_directory_mount_is_limited_to_relay_and_health_does_not_gate_studio():
     shared = '/lzcapp/var/docker-runtime:/run/hermes-docker'
     assert shared in relay['binds'] and shared in webui['binds']
     assert not any('playground' in bind for bind in webui['binds'])
-    assert '--check' in relay['healthcheck']['test']
+    assert '--check-listener' in relay['healthcheck']['test']
+    assert '--check' not in relay['healthcheck']['test']
     assert webui['healthcheck']['test'] == [
         'CMD', 'curl', '-f', 'http://127.0.0.1:8648/livez'
     ]
@@ -77,8 +78,12 @@ def test_setup_does_not_destroy_existing_custom_endpoint(tmp_path, kind):
     before = client.lstat()
     try:
         result = link(client, relay)
-        assert result.returncode == 1
-        assert 'leaving it intact' in result.stderr
+        if kind == 'socket':
+            assert result.returncode == 0
+            assert 'Using existing administrator Docker socket' in result.stderr
+        else:
+            assert result.returncode == 1
+            assert 'leaving it intact' in result.stderr
         assert client.lstat().st_ino == before.st_ino
     finally:
         if listener is not None:

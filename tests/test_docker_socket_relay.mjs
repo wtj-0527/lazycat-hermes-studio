@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { checkHealth, startRelay } from '../content/docker-socket-relay.mjs';
+import { checkHealth, checkListener, startRelay } from '../content/docker-socket-relay.mjs';
 
 const script = fileURLToPath(new URL('../content/docker-socket-relay.mjs', import.meta.url));
 
@@ -129,6 +129,30 @@ test('missing upstream and failed health checks do not stop the relay; it recove
   assert.equal(relay.server.listening, true);
   await f.server((_request, response) => response.end('OK'), f.upstreamPath, true);
   await checkHealth(f.listenPath);
+});
+
+test('listener health stays healthy without upstream while Docker diagnostics fail', async t => {
+  const f = await fixture(t);
+  await assert.rejects(checkListener(f.listenPath, 200));
+  await f.relay();
+  await checkListener(f.listenPath);
+  await assert.rejects(checkHealth(f.listenPath, 200));
+  await f.server((_request, response) => response.end('OK'), f.upstreamPath, true);
+  await checkHealth(f.listenPath);
+  await unlink(f.upstreamPath);
+  await checkListener(f.listenPath);
+  await assert.rejects(checkHealth(f.listenPath, 200));
+});
+
+test('packaged listener check exits successfully with a missing administrator mount', async t => {
+  const f = await fixture(t);
+  await f.child();
+  const health = spawn(process.execPath, [script, '--check-listener'], {
+    env: { ...process.env, NODE_OPTIONS: '', DOCKER_RELAY_LISTEN: f.listenPath },
+    stdio: 'ignore',
+  });
+  const [code] = await once(health, 'exit');
+  assert.equal(code, 0);
 });
 
 test('health check has an absolute deadline even when the upstream accepts but never responds', async t => {
