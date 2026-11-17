@@ -1,3 +1,10 @@
+## 未发布
+
+- 包装层增加独立的 Docker Unix socket 转发服务，以目录挂载跟随宿主 socket 重建；保留标准 Docker endpoint，健康检查独立于 Studio。
+- 保留 Docker API 原始双向流和背压，支持 exec/attach；源断连不会重放已有操作。
+- 管理员 override 合并工具迁移旧的官方单文件挂载，并保留现有端口、权限及其他挂载。
+- 增加 socket 替换、转发服务重启、半关闭、大数据流及真实 PostgreSQL/Redis 容器回归。
+
 ## 2026.11.13.0254 — Studio 0.8.21 upstream main
 
 - 固定 upstream `EKKOLearnAI/ekko-studio` main `59447845d5abcf63b3b2d78ccf50e1d4627f4866`。

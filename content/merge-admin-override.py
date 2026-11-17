@@ -9,25 +9,56 @@ import yaml
 def merge(admin, packaged):
     result = copy.deepcopy(admin or {})
     services = result.setdefault('services', {})
-    target = services.setdefault('hermes-webui', {})
-    required = packaged['services']['hermes-webui']
-    for key in ('cap_add', 'devices', 'volumes'):
-        values = list(target.get(key) or [])
-        for item in required.get(key, []):
-            if item not in values:
-                # Do not silently introduce conflicting destination mounts.
-                if key in ('devices', 'volumes'):
-                    destination = item.split(':')[1]
-                    for existing in values:
-                        dest = (existing.get('target') if isinstance(existing, dict)
-                                else existing.split(':')[1])
-                        if dest == destination:
-                            raise ValueError(f'conflicting {key} target {destination}; review manually')
-                values.append(item)
-        target[key] = values
-    if 'SYS_ADMIN' in (target.get('cap_drop') or []):
+    webui = services.setdefault('hermes-webui', {})
+    # Retire only our known old bind in the generated candidate. A custom
+    # endpoint needs explicit review, not silent removal or a hidden fallback.
+    volumes = []
+    for item in webui.get('volumes') or []:
+        source, destination = mount_paths(item)
+        if destination in ('/run/docker.sock', '/var/run/docker.sock'):
+            if source != '/data/playground/docker.sock':
+                raise ValueError(f'custom Docker endpoint {destination}; review manually')
+            continue
+        volumes.append(item)
+    if 'volumes' in webui:
+        webui['volumes'] = volumes
+    for name, required in packaged['services'].items():
+        target = services.setdefault(name, {})
+        for key in ('cap_add', 'devices', 'volumes'):
+            if key not in required:
+                continue
+            values = list(target.get(key) or [])
+            for item in required[key]:
+                if item not in values:
+                    if key == 'volumes' and any(
+                        mount_paths(existing) == mount_paths(item)
+                        and mount_read_only(existing) == mount_read_only(item)
+                        for existing in values
+                    ):
+                        continue
+                    if key in ('devices', 'volumes'):
+                        _, destination = mount_paths(item)
+                        for existing in values:
+                            if mount_paths(existing)[1] == destination:
+                                raise ValueError(f'conflicting {name} {key} target {destination}; review manually')
+                    values.append(copy.deepcopy(item))
+            target[key] = values
+    if 'SYS_ADMIN' in (webui.get('cap_drop') or []):
         raise ValueError('administrator explicitly drops SYS_ADMIN; review manually')
     return result
+
+
+def mount_paths(item):
+    if isinstance(item, dict):
+        return item.get('source'), item.get('target')
+    return tuple(item.split(':')[:2])
+
+
+def mount_read_only(item):
+    if isinstance(item, dict):
+        return bool(item.get('read_only', False))
+    fields = item.split(':')
+    return len(fields) > 2 and 'ro' in fields[2].split(',')
 
 
 def main():

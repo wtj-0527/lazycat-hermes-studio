@@ -50,7 +50,7 @@ uv tool install <package>          # → ~/.local/bin/，重启不丢
 ## 发布维护
 
 当前主线不包含自动升级或 LPK 发布 workflow。发布时固定上游 `main` 的完整提交，
-按锁文件重新构建 Studio，并将镜像推送至 ACR；两个 Studio 服务必须引用同一镜像摘要。
+按锁文件重新构建 Studio，并将镜像推送至 ACR；所有使用 Studio 镜像的服务必须引用同一镜像摘要。
 同时更新 `package.yml`、`content/release-provenance.json` 和版本日志，通过 PR 合并。
 
 从合并后的包装仓提交运行 `lzc-cli project build -o <输出路径>`，校验包内 manifest、
@@ -62,6 +62,39 @@ Node.js 下载源和 npm registry 设置为 `npmmirror.com`，不能依赖宿主
 配置自动传入 Docker；如需切换镜像，使用 `NPM_REGISTRY` 和 `NODE_MIRROR`
 build args，并在构建证据中记录最终值。
 
+## Docker socket 自动恢复
+
+包装层的 `docker-socket-relay` 服务通过只读目录挂载访问共享 playground
+Docker，每次新连接重新打开宿主 `docker.sock`，避免单文件绑定锁住已删除的旧
+socket。主容器只共享 `/run/hermes-docker`，标准 `/run/docker.sock`
+（通常也即 `/var/run/docker.sock`）通过符号链接指向该目录中的转发 socket。
+主容器不挂载 playground 数据目录；转发服务不开放 TCP 端口。
+
+转发保留原始字节流、半关闭和背压，支持 Docker exec/attach、长连接及流式响应。
+正在执行的连接在 daemon 停止时仍可能失败；服务不会重放或重试 Docker 操作，
+后续新连接会使用当前的宿主 socket。转发服务重启后，主容器也通过共享目录看到
+新的监听 socket。Docker 可用性由该服务自己的健康检查报告，Studio 的 `/livez`
+和应用健康检查保持独立，不依赖 Docker `service_healthy`。
+
+升级时需重建服务以应用新的目录挂载。若有管理员 override，用随包的
+`content/merge-admin-override.py` 生成候选配置：它保留端口等现有设置，移除已知
+旧的 playground 单文件绑定，并补入转发服务的只读目录挂载。自定义 Docker
+endpoint 或冲突挂载会要求人工核对；启动脚本不会删除已有 endpoint。
+工具只生成候选文件，不修改宿主配置。
+
+验证：
+
+```sh
+NODE_OPTIONS= node --test tests/test_docker_socket_relay.mjs
+NODE_OPTIONS= uv run --with pytest --with pyyaml python -m pytest tests/test_docker_socket_packaging.py -q
+# 使用本地 Docker 和已缓存的 postgres:18.1-alpine3.23 / redis:8.4-alpine：
+DOCKER_RELAY_RUNTIME_TEST=1 NODE_OPTIONS= uv run --with pytest --with pyyaml python -m pytest tests/test_docker_socket_runtime.py -q
+```
+
+运行时验收只创建带唯一标签的临时容器，使用 `network=none`、不发布端口，
+并在结束时停止删除；覆盖源路径失效后恢复、真实容器创建、数据库读写和
+Docker exec 双向二进制流。它不重启宿主 Docker 或当前 Studio 实例。
+
 ## License
 
 [AGPL-3.0](LICENSE)
@@ -69,8 +102,8 @@ build args，并在构建证据中记录最终值。
 ## Rootfs 升级协调器（fail-closed）
 
 普通启动可并行；镜像变化时的 rootfs 删除/复制必须先取得共享 playground
-Docker 上的 `hermes-studio-rootfs-upgrade-lock`。所有实例必须挂载同一个
-`/data/playground/docker.sock`（现有 compose override），不得改为各实例私有 Docker。
+Docker 上的 `hermes-studio-rootfs-upgrade-lock`。所有实例必须经转发服务连接同一个
+`/data/playground/docker.sock`，不得改为各实例私有 Docker。
 升级已有安装前应核对实际挂载，因为 compose override 不一定在升级时重新生成。
 
 协调器使用独立的 `registry.cn-shanghai.aliyuncs.com/wtjking/nginx:alpine`
@@ -97,7 +130,7 @@ Docker 上的 `hermes-studio-rootfs-upgrade-lock`。所有实例必须挂载同�
 
 启动前验证 overlay 挂载，任何目录挂载失败都会停止服务，避免持久化工具
 被隐藏但应用继续运行。管理员 override 替换包内 override 时需要显式保留
-SYS_ADMIN、fuse 和共享 Docker socket。详见 `content/ROOTFS-REPAIR.md`；
+SYS_ADMIN、fuse 和转发服务的 playground 只读目录挂载。详见 `content/ROOTFS-REPAIR.md`；
 随包提供只生成候选配置、不自动修改宿主机的合并工具。
 
 ## 自定义域名与跨域来源
