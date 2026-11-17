@@ -73,14 +73,18 @@ socket。主容器只共享 `/run/hermes-docker`，标准 `/run/docker.sock`
 转发保留原始字节流、半关闭和背压，支持 Docker exec/attach、长连接及流式响应。
 正在执行的连接在 daemon 停止时仍可能失败；服务不会重放或重试 Docker 操作，
 后续新连接会使用当前的宿主 socket。转发服务重启后，主容器也通过共享目录看到
-新的监听 socket。Docker 可用性由该服务自己的健康检查报告，Studio 的 `/livez`
-和应用健康检查保持独立，不依赖 Docker `service_healthy`。
+新的监听 socket。懒猫会汇总所有服务的健康状态，因此服务健康检查只检测本地
+relay 监听器（`--check-listener`）。Docker 可用性单独通过 `--check` 检测；
+上游暂时不可用不会将运行中的整个应用判为错误。Studio 的 `/livez` 保持不变。
 
 升级时需重建服务以应用新的目录挂载。若有管理员 override，用随包的
 `content/merge-admin-override.py` 生成候选配置：它保留端口等现有设置，移除已知
 旧的 playground 单文件绑定，并补入转发服务的只读目录挂载。自定义 Docker
 endpoint 或冲突挂载会要求人工核对；启动脚本不会删除已有 endpoint。
-工具只生成候选文件，不修改宿主配置。
+工具只生成候选文件，不修改宿主配置。管理员 override 会完整替换包内 override，
+因此只更新 LPK 不能自动补入被覆盖的宿主目录挂载。保留旧单文件 socket 绑定的
+安装仍使用其原有 Docker endpoint，升级可正常启动；完成配置迁移后才启用
+随宿主 socket 重建自动恢复的能力。仅监听器健康不代表已完成这项迁移。
 
 验证：
 
@@ -94,6 +98,13 @@ DOCKER_RELAY_RUNTIME_TEST=1 NODE_OPTIONS= uv run --with pytest --with pyyaml pyt
 运行时验收只创建带唯一标签的临时容器，使用 `network=none`、不发布端口，
 并在结束时停止删除；覆盖源路径失效后恢复、真实容器创建、数据库读写和
 Docker exec 双向二进制流。它不重启宿主 Docker 或当前 Studio 实例。
+
+在 Docker 宿主机可运行 `tests/verify_docker_socket_install.py`，通过
+`--engine lzc-docker --image <已缓存的镜像摘要> --content <content绝对路径>
+--upstream-directory /data/playground --output <报告绝对路径>` 验证真实容器。
+该验收使用无网络、无发布端口的临时容器，复现旧健康检查的 unhealthy，
+并分别检查旧 socket 绑定和目录挂载迁移后的服务健康及主容器 Docker API；
+它不安装 LPK，也不修改现有应用或管理员 override。
 
 ## License
 

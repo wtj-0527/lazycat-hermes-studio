@@ -38,10 +38,10 @@ services:
       - DOCKER_RELAY_UPSTREAM=/run/playground/docker.sock
     binds:
       - /lzcapp/var/docker-runtime:/run/hermes-docker
-    # Docker may be temporarily down without making Studio unhealthy.
-    # There is deliberately no service_healthy dependency from hermes-webui.
+    # LazyCat aggregates all service health checks into application status.
+    # Check relay liveness only; --check separately diagnoses upstream Docker.
     healthcheck:
-      test: ["CMD", "/usr/local/bin/node", "/lzcapp/pkg/content/docker-socket-relay.mjs", "--check"]
+      test: ["CMD", "/usr/local/bin/node", "/lzcapp/pkg/content/docker-socket-relay.mjs", "--check-listener"]
       interval: 15s
       timeout: 5s
       retries: 3

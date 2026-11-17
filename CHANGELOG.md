@@ -1,3 +1,10 @@
+## 2026.11.17.0813 — 修复管理员 override 场景的安装错误
+
+- 继续固定 Studio 0.8.25 main `2cbdf181c8d6f6818cebdc893479a88ff82a1cfa` 和既有镜像摘要，未变更上游源码。
+- 修复 v2026.11.17.0733 在旧管理员 override 下因 relay 上游缺失而导致整个应用错误的问题：服务健康只检查本地监听，Docker 可用性由独立诊断报告。
+- 保留现有主容器 Docker socket 作为受支持的升级模式；旧管理员配置无需先迁移即可启动，目录挂载迁移后启用 socket 自动重连。
+- 在真实 lzc-docker 中复现旧 unhealthy，并验证旧配置与迁移配置的 relay、Studio 健康和主容器 Docker API；测试未更改现有应用。
+
 ## 2026.11.17.0733 — Studio 0.8.25 upstream main
 
 - 固定 upstream `EKKOLearnAI/ekko-studio` main `2cbdf181c8d6f6818cebdc893479a88ff82a1cfa`，包含账户网关迁移后的 Provider 管理修复；该提交 Build、Test 已通过。
