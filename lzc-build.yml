@@ -16,5 +16,8 @@ compose_override:
         - SYS_ADMIN
       devices:
         - /dev/fuse:/dev/fuse
+    docker-socket-relay:
       volumes:
-        - /data/playground/docker.sock:/var/run/docker.sock
+        # A directory bind follows replacement of docker.sock. The main
+        # container receives only the relay socket, never this host directory.
+        - /data/playground:/run/playground:ro
