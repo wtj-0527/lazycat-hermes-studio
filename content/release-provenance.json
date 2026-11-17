@@ -1,11 +1,18 @@
 {
-  "source": "59447845d5abcf63b3b2d78ccf50e1d4627f4866",
-  "source_tree": "59447845d5abcf63b3b2d78ccf50e1d4627f4866",
-  "version": "0.8.21",
+  "source_repository": "https://github.com/EKKOLearnAI/ekko-studio",
+  "source": "2cbdf181c8d6f6818cebdc893479a88ff82a1cfa",
+  "source_tree": "a14d0ebcf4ff19918c1119ee794b412fda06ac3d",
+  "version": "0.8.25",
   "mode": "upstream-main",
-  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544",
-  "image_tag": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.21-upstream-main-59447845d-202611130230",
-  "image_digest": "sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544",
-  "packaging_base": "a563f56cdde80df8af504fcd43efded7b04cc3ae",
-  "created_at": "2026-11-13T02:54:38.732263+00:00"
+  "image_ref": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:2b83646711f2c861f2c868f44c74d2c6f055f0003d03f3efad54806e47af0f46",
+  "image_tag": "registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui:v0.8.25-upstream-main-2cbdf181c-202611170730",
+  "image_digest": "sha256:2b83646711f2c861f2c868f44c74d2c6f055f0003d03f3efad54806e47af0f46",
+  "base_image": "nousresearch/hermes-agent@sha256:9774f4f39a9bb8c2f68ce728ed5e99ddbad282163be56764afacf88ed952b784",
+  "platform": "linux/amd64",
+  "node_version": "24.22.1",
+  "npm_registry": "https://registry.npmmirror.com/",
+  "node_mirror": "https://npmmirror.com/mirrors/node",
+  "packaging_base": "8e28f2f9d05defcc47c90d85413434fbf35614e5",
+  "docker_relay_commit": "f8c6be199d05a1d317b57121ec7e3cda2d0a3364",
+  "created_at": "2026-11-17T07:33:48.180134+00:00"
 }

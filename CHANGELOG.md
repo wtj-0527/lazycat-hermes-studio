@@ -1,5 +1,8 @@
-## 未发布
+## 2026.11.17.0733 — Studio 0.8.25 upstream main
 
+- 固定 upstream `EKKOLearnAI/ekko-studio` main `2cbdf181c8d6f6818cebdc893479a88ff82a1cfa`，包含账户网关迁移后的 Provider 管理修复；该提交 Build、Test 已通过。
+- 三个 Studio 镜像服务同步固定摘要 `registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:2b83646711f2c861f2c868f44c74d2c6f055f0003d03f3efad54806e47af0f46`（linux/amd64）。
+- 使用 npmmirror、固定 Node.js 和基础镜像重新构建；源码一致性、Sharp/node-pty 和隔离启动检查通过。
 - 包装层增加独立的 Docker Unix socket 转发服务，以目录挂载跟随宿主 socket 重建；保留标准 Docker endpoint，健康检查独立于 Studio。
 - 保留 Docker API 原始双向流和背压，支持 exec/attach；源断连不会重放已有操作。
 - 管理员 override 合并工具迁移旧的官方单文件挂载，并保留现有端口、权限及其他挂载。

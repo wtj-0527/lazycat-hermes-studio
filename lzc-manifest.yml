@@ -19,7 +19,7 @@ services:
       sh /lzcapp/pkg/content/setup-nginx.sh
 
   lazycat-ticket-lease:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:2b83646711f2c861f2c868f44c74d2c6f055f0003d03f3efad54806e47af0f46
     entrypoint: /bin/sh /lzcapp/pkg/content/start-lazycat-ticket-lease.sh
     # LZCAPP_API_GATEWAY_ADDRESS is injected by the LazyCat runtime into this
     # application service. Never construct or override the gateway address.
@@ -31,7 +31,7 @@ services:
       - /lzcapp/var/mcp-runtime:/lzcapp/var/mcp-runtime
 
   docker-socket-relay:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:2b83646711f2c861f2c868f44c74d2c6f055f0003d03f3efad54806e47af0f46
     entrypoint: /usr/local/bin/node /lzcapp/pkg/content/docker-socket-relay.mjs
     environment:
       - DOCKER_RELAY_LISTEN=/run/hermes-docker/docker.sock
@@ -48,7 +48,7 @@ services:
       start_period: 10s
 
   hermes-webui:
-    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:e676b25d2f54ad01a557acae8216e877d5c77e2fa68097b6aae9025ffcfd0544
+    image: registry.cn-shanghai.aliyuncs.com/wtjking/hermes-web-ui@sha256:2b83646711f2c861f2c868f44c74d2c6f055f0003d03f3efad54806e47af0f46
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8648/livez"]
       interval: 15s
